@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Box, Button, Card, LinearProgress, Stack, Typography } from '@mui/material'
 import { colors } from '../colors.ts'
+import { nextResourceValue } from '../utils/adjustResource.ts'
 import AppTooltip from './AppTooltip.tsx'
 import { rightsizingBody, rightsizingExample, rightsizingGoal, rightsizingTitle } from './RightsizingIntro.tsx'
 import type { WorkloadAmount, WorkloadResources } from '../types/infrastructure.ts'
@@ -79,12 +80,18 @@ export default function WorkloadResourcesCard({ resources, onAdjust, onReset }: 
             </Stack>
             <ResourceLine
               kind="CPU"
+              resources={resources}
+              name={resource.name}
+              metric="cpu"
               amount={resource.cpu}
               color={resource.name.startsWith('feed') ? colors.feedCpu : colors.userCpu}
               onAdjust={(field, direction) => onAdjust(resource.name, 'cpu', field, direction)}
             />
             <ResourceLine
               kind="Memory"
+              resources={resources}
+              name={resource.name}
+              metric="memory"
               amount={resource.memory}
               color={resource.name.startsWith('feed') ? colors.feedMemory : colors.userMemory}
               onAdjust={(field, direction) => onAdjust(resource.name, 'memory', field, direction)}
@@ -98,17 +105,23 @@ export default function WorkloadResourcesCard({ resources, onAdjust, onReset }: 
 
 function ResourceLine({
   kind,
+  resources,
+  name,
+  metric,
   amount,
   color,
   onAdjust,
 }: {
   kind: string
+  resources: WorkloadResources[]
+  name: string
+  metric: 'cpu' | 'memory'
   amount: WorkloadAmount
   color: string
   onAdjust: (field: 'request' | 'limit', direction: 'raise' | 'lower') => void
 }) {
-  const requestAdvice = recommendRequest(amount)
-  const limitAdvice = recommendLimit(amount)
+  const requestAdvice = actionableAdvice(resources, name, metric, 'request', recommendRequest(amount))
+  const limitAdvice = actionableAdvice(resources, name, metric, 'limit', recommendLimit(amount))
   const width = Math.max(0, Math.min(100, (amount.used / amount.possible) * 100))
 
   return (
@@ -176,6 +189,18 @@ function AdviceButton({ field, advice, onClick }: { field: string; advice: Advic
       {field} {advice}
     </Button>
   )
+}
+
+function actionableAdvice(
+  resources: WorkloadResources[],
+  name: string,
+  metric: 'cpu' | 'memory',
+  field: 'request' | 'limit',
+  advice: Advice,
+): Advice {
+  if (advice === 'Keep') return 'Keep'
+  const direction = advice === 'Raise' ? 'raise' : 'lower'
+  return nextResourceValue(resources, name, metric, field, direction) === null ? 'Keep' : advice
 }
 
 function recommendRequest(amount: WorkloadAmount): Advice {

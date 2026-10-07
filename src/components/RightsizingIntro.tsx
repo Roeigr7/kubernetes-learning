@@ -5,7 +5,7 @@ import { colors } from '../colors.ts'
 export const rightsizingTitle = 'Workload Rightsizing In My Words'
 
 export const rightsizingBody =
-  'Workload Rightsizing זה בעצם תהליך שבו בודקים לאורך זמן כמה משאבים ה־Workload באמת צורך, בעיקר CPU ו־Memory. לפי הנתונים האלה אנחנו מזהים איפה אנחנו מקצים יותר מדי משאבים ויכולים להוריד אותם כדי לחסוך בעלויות, ואיפה אין מספיק משאבים וצריך להגדיל אותם כדי לשמור על ביצועים תקינים.'
+  'Workload Rightsizing הוא תהליך שבו בודקים לאורך זמן כמה משאבים ה־Workload באמת צורך, בעיקר CPU ו־Memory. לפי הנתונים האלה אנחנו מזהים איפה אנחנו מקצים יותר מדי משאבים ויכולים להוריד אותם כדי לחסוך בעלויות, ואיפה אין מספיק משאבים וצריך להגדיל אותם כדי לשמור על ביצועים תקינים.'
 
 export const rightsizingGoal =
   'המטרה היא למצוא את האיזון הנכון בין עלות לביצועים, על בסיס נתונים שנאספו לאורך זמן.'
@@ -98,7 +98,7 @@ export default function RightsizingIntro() {
           <Typography sx={{ fontWeight: 700, fontSize: 15, mb: 1.25 }}>העמוד מחולק לשלושה חלקים</Typography>
           <Stack spacing={1.5}>
             {pageParts.map((part, index) => (
-              <Stack key={part.title} direction="row" spacing={1.25} sx={{ alignItems: 'flex-start' }}>
+              <Stack key={part.title} direction="row" useFlexGap spacing={2} sx={{ alignItems: 'flex-start' }}>
                 <Box
                   sx={{
                     width: 24,

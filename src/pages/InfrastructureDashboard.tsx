@@ -14,6 +14,7 @@ import PodDistributionChart from '../components/PodDistributionChart.tsx'
 import SummaryCard from '../components/SummaryCard.tsx'
 import WorkloadsTable from '../components/WorkloadsTable.tsx'
 import { colors } from '../colors.ts'
+import { nextResourceValue } from '../utils/adjustResource.ts'
 import { titleCase } from '../utils/format.ts'
 
 export default function InfrastructureDashboard() {
@@ -26,30 +27,9 @@ export default function InfrastructureDashboard() {
     setResources((current) =>
       current.map((item) => {
         if (item.name !== name) return item
-        const step = direction === 'raise' ? 0.5 : -0.5
-        const taken = new Set<number>()
-        for (const other of current) {
-          for (const key of ['cpu', 'memory'] as const) {
-            for (const part of ['request', 'limit'] as const) {
-              if (other.name === name && key === metric && part === field) continue
-              taken.add(other[key][part])
-            }
-          }
-        }
-        const amount = item[metric]
-        const fits = (value: number) => {
-          if (value > amount.possible) return false
-          if (field === 'request') return value >= 0.5 && value < amount.limit
-          return value > amount.request
-        }
-        let next = roundHalf(amount[field] + step)
-        for (let guard = 0; guard < 12 && (!fits(next) || taken.has(next)); guard += 1) {
-          const nudged = roundHalf(next + step)
-          if (nudged === next || !fits(nudged)) return item
-          next = nudged
-        }
-        if (!fits(next) || taken.has(next)) return item
-        return { ...item, [metric]: { ...amount, [field]: next } }
+        const next = nextResourceValue(current, name, metric, field, direction)
+        if (next === null) return item
+        return { ...item, [metric]: { ...item[metric], [field]: next } }
       }),
     )
   }
@@ -215,8 +195,4 @@ function copyResources(items: import('../types/infrastructure.ts').WorkloadResou
     cpu: { ...item.cpu },
     memory: { ...item.memory },
   }))
-}
-
-function roundHalf(value: number) {
-  return Math.round(value * 2) / 2
 }

@@ -3,7 +3,6 @@ import {
   Avatar,
   Box,
   Card,
-  InputAdornment,
   LinearProgress,
   MenuItem,
   Stack,
@@ -18,7 +17,6 @@ import {
 } from '@mui/material'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
-import SearchIcon from '@mui/icons-material/Search'
 import { colors } from '../colors.ts'
 import AppTooltip from './AppTooltip.tsx'
 import type { Workload, WorkloadResources } from '../types/infrastructure.ts'
@@ -59,7 +57,6 @@ type WorkloadRow = Workload & {
 }
 
 export default function WorkloadsTable({ workloads, resources }: WorkloadsTableProps) {
-  const [query, setQuery] = useState('')
   const [namespace, setNamespace] = useState('all')
   const [sort, setSort] = useState<SortState | null>(null)
   const [loadedCount, setLoadedCount] = useState(PAGE_SIZE)
@@ -77,16 +74,8 @@ export default function WorkloadsTable({ workloads, resources }: WorkloadsTableP
     [workloads],
   )
   const visibleWorkloads = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
     const filtered = workloads.map((workload) => withUsage(workload, resources)).filter((workload) => {
-      const matchesQuery =
-        normalizedQuery.length === 0 ||
-        workload.name.toLowerCase().includes(normalizedQuery) ||
-        workload.pod.toLowerCase().includes(normalizedQuery) ||
-        workload.node.toLowerCase().includes(normalizedQuery) ||
-        workload.containers.some((container) => container.toLowerCase().includes(normalizedQuery))
-      const matchesNamespace = namespace === 'all' || workload.namespace === namespace
-      return matchesQuery && matchesNamespace
+      return namespace === 'all' || workload.namespace === namespace
     })
 
     if (!sort) return filtered
@@ -102,7 +91,7 @@ export default function WorkloadsTable({ workloads, resources }: WorkloadsTableP
     })
 
     return sorted
-  }, [namespace, query, resources, sort, workloads])
+  }, [namespace, resources, sort, workloads])
 
   const shownWorkloads = visibleWorkloads.slice(0, loadedCount)
   stateRef.current = { loadedCount, total: visibleWorkloads.length }
@@ -113,7 +102,7 @@ export default function WorkloadsTable({ workloads, resources }: WorkloadsTableP
     loadingRef.current = false
     if (loadTimer.current !== null) window.clearTimeout(loadTimer.current)
     if (scrollRef.current) scrollRef.current.scrollTop = 0
-  }, [namespace, query, sort])
+  }, [namespace, sort])
 
   useEffect(() => {
     return () => {
@@ -235,23 +224,6 @@ export default function WorkloadsTable({ workloads, resources }: WorkloadsTableP
         </Stack>
 
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.25}>
-          <TextField
-            size="small"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search workloads, pods, or nodes"
-            aria-label="Search workloads"
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-                  </InputAdornment>
-                ),
-              },
-            }}
-            sx={{ flex: 1, minWidth: 0, width: '100%' }}
-          />
           <TextField
             select
             size="small"
