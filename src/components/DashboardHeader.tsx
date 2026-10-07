@@ -17,6 +17,7 @@ import {
 } from '@mui/material'
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined'
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone'
+import { colors } from '../colors.ts'
 import type { Company, DashboardUser, NotificationItem } from '../types/infrastructure.ts'
 import { titleCase } from '../utils/format.ts'
 
@@ -92,10 +93,10 @@ export default function DashboardHeader({
           startIcon={<AccountTreeOutlinedIcon sx={{ fontSize: 18 }} />}
           sx={{
             color: 'primary.main',
-            bgcolor: '#EFF4FF',
+            bgcolor: colors.tint,
             px: 1.5,
             borderRadius: 2,
-            '&:hover': { bgcolor: '#E0EAFF' },
+            '&:hover': { bgcolor: colors.tintHover },
           }}
         >
           Infrastructure
@@ -151,7 +152,7 @@ export default function DashboardHeader({
               sx={{
                 width: 36,
                 height: 36,
-                bgcolor: '#101828',
+                bgcolor: colors.ink,
                 fontSize: 13,
                 fontWeight: 700,
                 cursor: 'default',
@@ -167,7 +168,7 @@ export default function DashboardHeader({
         anchorEl={menuAnchor}
         open={Boolean(menuAnchor)}
         onClose={() => setMenuAnchor(null)}
-        slotProps={{ paper: { sx: { width: 360, mt: 1, border: '1px solid #E4E7EC', boxShadow: '0 12px 32px rgba(16, 24, 40, 0.12)' } } }}
+        slotProps={{ paper: { sx: { width: 360, mt: 1, border: '1px solid', borderColor: colors.line, boxShadow: '0 12px 32px rgba(18, 23, 42, 0.12)' } } }}
       >
         <Box sx={{ px: 2, py: 1.25 }}>
           <Typography sx={{ fontWeight: 600, fontSize: 14 }}>Notifications</Typography>

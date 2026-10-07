@@ -1,28 +1,29 @@
 import { createTheme } from '@mui/material/styles'
+import { colors } from './colors.ts'
 
 export const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#155EEF',
-      dark: '#1849C6',
+      main: colors.navy,
+      dark: '#0B1020',
     },
     success: {
-      main: '#067647',
+      main: colors.healthy,
     },
     warning: {
-      main: '#B54708',
+      main: colors.warning,
     },
     error: {
-      main: '#B42318',
+      main: colors.critical,
     },
     text: {
-      primary: '#101828',
-      secondary: '#667085',
+      primary: colors.ink,
+      secondary: colors.slate,
     },
-    divider: '#E4E7EC',
+    divider: colors.line,
     background: {
-      default: '#F5F7FB',
+      default: colors.surface,
       paper: '#FFFFFF',
     },
   },
@@ -40,7 +41,7 @@ export const theme = createTheme({
     MuiCssBaseline: {
       styleOverrides: {
         body: {
-          backgroundColor: '#F5F7FB',
+          backgroundColor: colors.surface,
         },
       },
     },
@@ -48,8 +49,8 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 12,
-          border: '1px solid #E4E7EC',
-          boxShadow: '0 1px 2px rgba(16, 24, 40, 0.04)',
+          border: `1px solid ${colors.line}`,
+          boxShadow: '0 10px 30px rgba(18, 23, 42, 0.06)',
           backgroundImage: 'none',
         },
       },
@@ -92,13 +93,13 @@ export const theme = createTheme({
     MuiTableCell: {
       styleOverrides: {
         root: {
-          borderColor: '#EEF2F6',
+          borderColor: colors.grid,
         },
         head: {
-          color: '#667085',
+          color: colors.slate,
           fontSize: 12,
           fontWeight: 600,
-          backgroundColor: '#F8FAFC',
+          backgroundColor: colors.paperMuted,
         },
       },
     },

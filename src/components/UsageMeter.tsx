@@ -1,4 +1,5 @@
 import { Box, LinearProgress, Stack, Typography } from '@mui/material'
+import { colors } from '../colors.ts'
 import { usageColor } from '../utils/usage.ts'
 
 type UsageMeterProps = {
@@ -29,7 +30,7 @@ export default function UsageMeter({ value, label }: UsageMeterProps) {
         sx={{
           height: 6,
           borderRadius: 99,
-          bgcolor: '#EEF2F6',
+          bgcolor: colors.track,
           '& .MuiLinearProgress-bar': {
             borderRadius: 99,
             bgcolor: color,

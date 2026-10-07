@@ -1,288 +1,153 @@
 {
   "company": {
-    "name": "Nexora",
-    "environment": "production",
+    "name": "Kube-Learn (WRS)",
+    "environment": "learning",
     "region": "us-east-1",
-    "environments": ["production"],
+    "environments": ["learning"],
     "regions": ["us-east-1"]
   },
   "user": {
-    "name": "Maya Rahman",
-    "email": "maya.rahman@nexora.io",
-    "role": "Platform Engineer",
-    "initials": "MR"
+    "name": "Sam Lee",
+    "email": "sam.lee@kube-learn.dev",
+    "role": "Student",
+    "initials": "SL"
   },
   "notifications": [
     {
       "id": "note-1",
-      "title": "Memory pressure on payments",
-      "detail": "payments-service is using 81% memory on worker-node-03.",
-      "time": "12 min ago"
+      "title": "All 3 nodes are Ready",
+      "detail": "node-1, node-2, and node-3 are servers that can run pods.",
+      "time": "10 min ago"
     },
     {
       "id": "note-2",
-      "title": "Pod still pending",
-      "detail": "email-worker-c41d0 is pending on worker-node-05.",
-      "time": "28 min ago"
+      "title": "user workload is on every node",
+      "detail": "One user pod runs on node-1, node-2, and node-3.",
+      "time": "25 min ago"
     },
     {
       "id": "note-3",
-      "title": "Cluster is healthy",
-      "detail": "6 of 6 nodes are Ready in us-east-1.",
+      "title": "feed workload uses two nodes",
+      "detail": "Feed pods run on node-2 and node-3. node-1 has only the user pod.",
       "time": "1 hr ago"
     }
   ],
   "cluster": {
-    "name": "nexora-production",
+    "name": "kube-learn",
     "status": "Healthy",
     "kubernetesVersion": "1.31",
     "provider": "Amazon EKS",
-    "nodes": 6,
-    "pods": 42,
-    "containers": 42,
-    "runningPods": 41,
-    "cpuUtilization": 61,
+    "nodes": 3,
+    "pods": 5,
+    "containers": 5,
+    "runningPods": 5,
+    "cpuUtilization": 44,
     "updatedAt": "07 Oct 2026 · 14:10 UTC"
   },
   "nodes": [
     {
-      "id": "node-01",
-      "name": "worker-node-01",
-      "type": "EC2",
-      "instanceType": "t3.xlarge",
+      "id": "node-1",
+      "name": "node-1",
+      "type": "Server",
+      "instanceType": "small",
       "status": "Ready",
-      "cpuUsage": 62,
-      "memoryUsage": 71,
-      "pods": 8,
-      "region": "us-east-1a"
+      "cpuUsage": 30,
+      "memoryUsage": 40,
+      "pods": 1,
+      "region": "us-east-1"
     },
     {
-      "id": "node-02",
-      "name": "worker-node-02",
-      "type": "EC2",
-      "instanceType": "t3.xlarge",
+      "id": "node-2",
+      "name": "node-2",
+      "type": "Server",
+      "instanceType": "small",
       "status": "Ready",
-      "cpuUsage": 48,
-      "memoryUsage": 55,
-      "pods": 7,
-      "region": "us-east-1b"
+      "cpuUsage": 42,
+      "memoryUsage": 50,
+      "pods": 2,
+      "region": "us-east-1"
     },
     {
-      "id": "node-03",
-      "name": "worker-node-03",
-      "type": "EC2",
-      "instanceType": "m6i.xlarge",
+      "id": "node-3",
+      "name": "node-3",
+      "type": "Server",
+      "instanceType": "small",
       "status": "Ready",
-      "cpuUsage": 78,
-      "memoryUsage": 84,
-      "pods": 10,
-      "region": "us-east-1a"
-    },
-    {
-      "id": "node-04",
-      "name": "worker-node-04",
-      "type": "EC2",
-      "instanceType": "t3.large",
-      "status": "Ready",
-      "cpuUsage": 57,
-      "memoryUsage": 60,
-      "pods": 6,
-      "region": "us-east-1c"
-    },
-    {
-      "id": "node-05",
-      "name": "worker-node-05",
-      "type": "EC2",
-      "instanceType": "t3.large",
-      "status": "Ready",
-      "cpuUsage": 41,
-      "memoryUsage": 46,
-      "pods": 5,
-      "region": "us-east-1b"
-    },
-    {
-      "id": "node-06",
-      "name": "worker-node-06",
-      "type": "EC2",
-      "instanceType": "t3.medium",
-      "status": "Ready",
-      "cpuUsage": 52,
-      "memoryUsage": 58,
-      "pods": 6,
-      "region": "us-east-1c"
+      "cpuUsage": 40,
+      "memoryUsage": 47,
+      "pods": 2,
+      "region": "us-east-1"
     }
   ],
   "workloads": [
     {
-      "name": "api-gateway",
-      "namespace": "production",
-      "node": "worker-node-01",
-      "pod": "api-gateway-7d8f9",
-      "container": "api",
-      "cpu": 42,
-      "memory": 58,
+      "name": "user workload",
+      "namespace": "facebook",
+      "node": "node-1",
+      "pod": "user-pod-1",
+      "container": "user",
+      "cpu": 30,
+      "memory": 40,
       "status": "Running",
       "restarts": 0
     },
     {
-      "name": "checkout-web",
-      "namespace": "production",
-      "node": "worker-node-01",
-      "pod": "checkout-web-4c21a",
-      "container": "web",
-      "cpu": 28,
-      "memory": 36,
-      "status": "Running",
-      "restarts": 0
-    },
-    {
-      "name": "billing-api",
-      "namespace": "production",
-      "node": "worker-node-01",
-      "pod": "billing-api-e82c4",
-      "container": "billing",
-      "cpu": 51,
-      "memory": 64,
-      "status": "Running",
-      "restarts": 0
-    },
-    {
-      "name": "auth-service",
-      "namespace": "production",
-      "node": "worker-node-02",
-      "pod": "auth-service-5fd21",
-      "container": "auth",
-      "cpu": 31,
+      "name": "user workload",
+      "namespace": "facebook",
+      "node": "node-2",
+      "pod": "user-pod-2",
+      "container": "user",
+      "cpu": 36,
       "memory": 44,
       "status": "Running",
-      "restarts": 1
+      "restarts": 0
     },
     {
-      "name": "session-store",
-      "namespace": "production",
-      "node": "worker-node-02",
-      "pod": "session-store-8ab10",
-      "container": "redis",
-      "cpu": 22,
-      "memory": 61,
+      "name": "user workload",
+      "namespace": "facebook",
+      "node": "node-3",
+      "pod": "user-pod-3",
+      "container": "user",
+      "cpu": 34,
+      "memory": 42,
       "status": "Running",
       "restarts": 0
     },
     {
-      "name": "payments-service",
-      "namespace": "payments",
-      "node": "worker-node-03",
-      "pod": "payments-service-9ab42",
-      "container": "payments",
-      "cpu": 76,
-      "memory": 81,
+      "name": "feed workload",
+      "namespace": "facebook",
+      "node": "node-2",
+      "pod": "feed-pod-1",
+      "container": "feed",
+      "cpu": 48,
+      "memory": 55,
       "status": "Running",
       "restarts": 0
     },
     {
-      "name": "ledger-worker",
-      "namespace": "payments",
-      "node": "worker-node-03",
-      "pod": "ledger-worker-2cc91",
-      "container": "worker",
-      "cpu": 54,
-      "memory": 67,
-      "status": "Running",
-      "restarts": 2
-    },
-    {
-      "name": "fraud-engine",
-      "namespace": "payments",
-      "node": "worker-node-03",
-      "pod": "fraud-engine-11e80",
-      "container": "engine",
-      "cpu": 69,
-      "memory": 73,
-      "status": "Running",
-      "restarts": 0
-    },
-    {
-      "name": "catalog-api",
-      "namespace": "production",
-      "node": "worker-node-04",
-      "pod": "catalog-api-6f3d2",
-      "container": "catalog",
-      "cpu": 37,
-      "memory": 49,
-      "status": "Running",
-      "restarts": 0
-    },
-    {
-      "name": "search-indexer",
-      "namespace": "platform",
-      "node": "worker-node-04",
-      "pod": "search-indexer-90aa1",
-      "container": "indexer",
-      "cpu": 45,
+      "name": "feed workload",
+      "namespace": "facebook",
+      "node": "node-3",
+      "pod": "feed-pod-2",
+      "container": "feed",
+      "cpu": 46,
       "memory": 52,
       "status": "Running",
-      "restarts": 3
-    },
-    {
-      "name": "notifications",
-      "namespace": "platform",
-      "node": "worker-node-05",
-      "pod": "notifications-3bb77",
-      "container": "notify",
-      "cpu": 18,
-      "memory": 29,
-      "status": "Running",
       "restarts": 0
-    },
-    {
-      "name": "email-worker",
-      "namespace": "platform",
-      "node": "worker-node-05",
-      "pod": "email-worker-c41d0",
-      "container": "worker",
-      "cpu": 0,
-      "memory": 4,
-      "status": "Pending",
-      "restarts": 0
-    },
-    {
-      "name": "metrics-agent",
-      "namespace": "observability",
-      "node": "worker-node-06",
-      "pod": "metrics-agent-77e12",
-      "container": "agent",
-      "cpu": 24,
-      "memory": 33,
-      "status": "Running",
-      "restarts": 0
-    },
-    {
-      "name": "log-collector",
-      "namespace": "observability",
-      "node": "worker-node-06",
-      "pod": "log-collector-5a908",
-      "container": "fluent",
-      "cpu": 33,
-      "memory": 47,
-      "status": "Running",
-      "restarts": 1
     }
   ],
   "cpuHistory": [
-    { "time": "00:00", "usage": 42 },
-    { "time": "04:00", "usage": 48 },
-    { "time": "08:00", "usage": 57 },
-    { "time": "12:00", "usage": 63 },
-    { "time": "16:00", "usage": 71 },
-    { "time": "20:00", "usage": 58 },
-    { "time": "24:00", "usage": 61 }
+    { "time": "00:00", "usage": 30 },
+    { "time": "04:00", "usage": 36 },
+    { "time": "08:00", "usage": 42 },
+    { "time": "12:00", "usage": 50 },
+    { "time": "16:00", "usage": 46 },
+    { "time": "20:00", "usage": 40 },
+    { "time": "24:00", "usage": 44 }
   ],
   "podDistribution": [
-    { "name": "Node 01", "pods": 8 },
-    { "name": "Node 02", "pods": 7 },
-    { "name": "Node 03", "pods": 10 },
-    { "name": "Node 04", "pods": 6 },
-    { "name": "Node 05", "pods": 5 },
-    { "name": "Node 06", "pods": 6 }
+    { "name": "node-1", "pods": 1 },
+    { "name": "node-2", "pods": 2 },
+    { "name": "node-3", "pods": 2 }
   ]
 }

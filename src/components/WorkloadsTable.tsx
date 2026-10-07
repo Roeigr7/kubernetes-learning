@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   Avatar,
   Box,
   Card,
   InputAdornment,
+  LinearProgress,
   MenuItem,
   Stack,
   Table,
@@ -18,11 +19,10 @@ import {
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import SearchIcon from '@mui/icons-material/Search'
+import { colors } from '../colors.ts'
 import type { Workload } from '../types/infrastructure.ts'
 import StatusChip from './StatusChip.tsx'
 import UsageMeter from './UsageMeter.tsx'
-
-const avatarColors = ['#155EEF', '#067647', '#6941C6', '#C11574', '#B54708', '#0E7090']
 
 type SortKey = 'name' | 'namespace' | 'node' | 'pod' | 'cpu' | 'memory' | 'status' | 'restarts'
 type SortState = { key: SortKey; direction: 'asc' | 'desc' }
@@ -38,6 +38,8 @@ const columns: { key: SortKey; label: string; numeric?: boolean }[] = [
   { key: 'restarts', label: 'Restarts', numeric: true },
 ]
 
+const PAGE_SIZE = 10
+
 type WorkloadsTableProps = {
   workloads: Workload[]
 }
@@ -47,6 +49,15 @@ export default function WorkloadsTable({ workloads }: WorkloadsTableProps) {
   const [namespace, setNamespace] = useState('all')
   const [status, setStatus] = useState('all')
   const [sort, setSort] = useState<SortState | null>(null)
+  const [loadedCount, setLoadedCount] = useState(PAGE_SIZE)
+  const [loading, setLoading] = useState(false)
+  const [rowHeight, setRowHeight] = useState(52)
+  const [headHeight, setHeadHeight] = useState(41)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const loadingRef = useRef(false)
+  const loadTimer = useRef<number | null>(null)
+  const loadMoreRef = useRef<() => void>(() => {})
+  const stateRef = useRef({ loadedCount: PAGE_SIZE, total: 0 })
 
   const namespaces = useMemo(
     () => Array.from(new Set(workloads.map((workload) => workload.namespace))).sort(),
@@ -85,6 +96,83 @@ export default function WorkloadsTable({ workloads }: WorkloadsTableProps) {
     return sorted
   }, [namespace, query, sort, status, workloads])
 
+  const shownWorkloads = visibleWorkloads.slice(0, loadedCount)
+  stateRef.current = { loadedCount, total: visibleWorkloads.length }
+
+  useEffect(() => {
+    setLoadedCount(PAGE_SIZE)
+    setLoading(false)
+    loadingRef.current = false
+    if (loadTimer.current !== null) window.clearTimeout(loadTimer.current)
+    if (scrollRef.current) scrollRef.current.scrollTop = 0
+  }, [namespace, query, sort, status])
+
+  useEffect(() => {
+    return () => {
+      if (loadTimer.current !== null) window.clearTimeout(loadTimer.current)
+    }
+  }, [])
+
+  useLayoutEffect(() => {
+    const container = scrollRef.current
+    const row = container?.querySelector('tbody tr')
+    const head = container?.querySelector('thead')
+    if (shownWorkloads.length > 0 && row) setRowHeight(row.getBoundingClientRect().height)
+    if (head) setHeadHeight(head.getBoundingClientRect().height)
+  }, [shownWorkloads.length])
+
+  function loadMore() {
+    const { loadedCount: loaded, total } = stateRef.current
+    if (loadingRef.current || loaded >= total) return
+    loadingRef.current = true
+    setLoading(true)
+    loadTimer.current = window.setTimeout(() => {
+      setLoadedCount((count) => Math.min(count + PAGE_SIZE, stateRef.current.total))
+      loadingRef.current = false
+      setLoading(false)
+    }, 450)
+  }
+
+  loadMoreRef.current = loadMore
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+
+    const onWheel = (event: WheelEvent) => {
+      const horizontal = Math.abs(event.deltaX) > Math.abs(event.deltaY)
+      if (horizontal) {
+        const maxLeft = el.scrollWidth - el.clientWidth
+        const canScrollX =
+          (event.deltaX > 0 && el.scrollLeft < maxLeft - 1) || (event.deltaX < 0 && el.scrollLeft > 0)
+        if (!canScrollX) return
+        event.preventDefault()
+        el.scrollLeft += event.deltaX
+        return
+      }
+
+      const { loadedCount: loaded, total } = stateRef.current
+      const hasMoreRows = loaded < total
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 2
+      const atTop = el.scrollTop <= 0
+
+      if (event.deltaY > 0 && (!atBottom || hasMoreRows)) {
+        event.preventDefault()
+        if (atBottom && hasMoreRows) loadMoreRef.current()
+        else el.scrollTop += event.deltaY
+        return
+      }
+
+      if (event.deltaY < 0 && !atTop) {
+        event.preventDefault()
+        el.scrollTop += event.deltaY
+      }
+    }
+
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
+
   function toggleSort(key: SortKey) {
     setSort((current) => {
       if (current?.key === key) {
@@ -109,7 +197,7 @@ export default function WorkloadsTable({ workloads }: WorkloadsTableProps) {
           <Box>
             <Typography sx={{ fontSize: 15, fontWeight: 600 }}>Kubernetes Workloads</Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
-              Services scheduled on the production cluster. Showing {visibleWorkloads.length} of {workloads.length}.
+              One row is one pod. Showing {shownWorkloads.length} of {visibleWorkloads.length}.
             </Typography>
           </Box>
         </Stack>
@@ -165,9 +253,22 @@ export default function WorkloadsTable({ workloads }: WorkloadsTableProps) {
         </Stack>
       </Stack>
 
-      <TableContainer>
+      <Box sx={{ position: 'relative' }}>
+      <TableContainer
+        ref={scrollRef}
+        sx={{
+          maxHeight:
+            shownWorkloads.length > 0
+              ? headHeight + rowHeight * Math.min(PAGE_SIZE, shownWorkloads.length)
+              : undefined,
+          overflowX: 'auto',
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
+        }}
+      >
         <Table
           size="small"
+          stickyHeader
           sx={{
             '& .MuiTableCell-root': {
               px: 1.25,
@@ -215,7 +316,7 @@ export default function WorkloadsTable({ workloads }: WorkloadsTableProps) {
                 </TableCell>
               </TableRow>
             ) : (
-              visibleWorkloads.map((workload) => (
+              shownWorkloads.map((workload) => (
                 <TableRow key={workload.pod} hover>
                   <TableCell>
                     <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
@@ -225,7 +326,7 @@ export default function WorkloadsTable({ workloads }: WorkloadsTableProps) {
                           height: 28,
                           fontSize: 11,
                           fontWeight: 700,
-                          bgcolor: avatarColor(workload.name),
+                          bgcolor: workload.name.startsWith('feed') ? colors.blue : colors.green,
                         }}
                       >
                         {initials(workload.name)}
@@ -276,7 +377,7 @@ export default function WorkloadsTable({ workloads }: WorkloadsTableProps) {
                         fontSize: 13,
                         fontWeight: 700,
                         fontVariantNumeric: 'tabular-nums',
-                        color: workload.restarts > 0 ? '#B54708' : 'text.secondary',
+                        color: workload.restarts > 0 ? colors.warning : 'text.secondary',
                       }}
                     >
                       {workload.restarts}
@@ -288,16 +389,18 @@ export default function WorkloadsTable({ workloads }: WorkloadsTableProps) {
           </TableBody>
         </Table>
       </TableContainer>
+      {loading ? (
+        <LinearProgress
+          aria-label="Loading more workloads"
+          sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 3 }}
+        />
+      ) : null}
+      </Box>
     </Card>
   )
 }
 
 function initials(name: string): string {
-  const parts = name.split('-').filter(Boolean)
+  const parts = name.split(/[\s-]+/).filter(Boolean)
   return `${parts[0]?.[0] ?? ''}${parts[1]?.[0] ?? ''}`.toUpperCase()
-}
-
-function avatarColor(name: string): string {
-  const total = [...name].reduce((sum, char) => sum + char.charCodeAt(0), 0)
-  return avatarColors[total % avatarColors.length]
 }

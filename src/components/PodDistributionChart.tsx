@@ -1,8 +1,7 @@
 import { Box, Card, Stack, Typography } from '@mui/material'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
+import { colors, seriesColors } from '../colors.ts'
 import type { PodDistributionItem } from '../types/infrastructure.ts'
-
-const podColors = ['#155EEF', '#12B76A', '#7A5AF8', '#F79009', '#EE46BC', '#0BA5EC']
 
 type PodDistributionChartProps = {
   distribution: PodDistributionItem[]
@@ -16,7 +15,7 @@ export default function PodDistributionChart({ distribution }: PodDistributionCh
       <Box sx={{ px: 2.5, pt: 2, pb: 0.5 }}>
         <Typography sx={{ fontSize: 15, fontWeight: 600 }}>Pod Distribution</Typography>
         <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
-          How pods are spread across the {distribution.length} worker nodes.
+          node-1 runs 1 pod. node-2 and node-3 run 2 pods each.
         </Typography>
       </Box>
 
@@ -35,14 +34,14 @@ export default function PodDistributionChart({ distribution }: PodDistributionCh
               isAnimationActive={false}
             >
               {distribution.map((item, index) => (
-                <Cell key={item.name} fill={podColors[index % podColors.length]} />
+                <Cell key={item.name} fill={seriesColors[index % seriesColors.length]} />
               ))}
             </Pie>
             <Tooltip
               formatter={(value, name) => [`${value ?? 0} pods`, name]}
               contentStyle={{
                 borderRadius: 8,
-                border: '1px solid #E4E7EC',
+                border: `1px solid ${colors.line}`,
                 boxShadow: '0 8px 24px rgba(16, 24, 40, 0.08)',
                 fontSize: 13,
               }}
@@ -70,38 +69,27 @@ export default function PodDistributionChart({ distribution }: PodDistributionCh
         </Box>
       </Box>
 
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 1,
-          px: 2.5,
-          pb: 2.5,
-          mt: 0.5,
-        }}
-      >
+      <Stack spacing={1} sx={{ px: 2.5, pb: 2.5, mt: 0.5 }}>
         {distribution.map((item, index) => (
-          <Stack key={item.name} direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
-              <Box
-                sx={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  bgcolor: podColors[index % podColors.length],
-                  flexShrink: 0,
-                }}
-              />
-              <Typography variant="body2" noWrap>
-                {item.name}
-              </Typography>
-            </Stack>
+          <Stack key={item.name} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+            <Box
+              sx={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                bgcolor: seriesColors[index % seriesColors.length],
+                flexShrink: 0,
+              }}
+            />
+            <Typography variant="body2" sx={{ flex: 1 }}>
+              {item.name}
+            </Typography>
             <Typography variant="body2" sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-              {item.pods}
+              {item.pods} {item.pods === 1 ? 'pod' : 'pods'}
             </Typography>
           </Stack>
         ))}
-      </Box>
+      </Stack>
     </Card>
   )
 }

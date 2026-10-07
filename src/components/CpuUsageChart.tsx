@@ -1,5 +1,6 @@
 import { Box, Card, Divider, Stack, Typography } from '@mui/material'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { colors } from '../colors.ts'
 import type { CpuSample } from '../types/infrastructure.ts'
 import { formatPercent } from '../utils/format.ts'
 
@@ -23,7 +24,7 @@ export default function CpuUsageChart({ history }: CpuUsageChartProps) {
         <Box>
           <Typography sx={{ fontSize: 15, fontWeight: 600 }}>Cluster CPU Utilization</Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
-            Control-plane sample across the last 24 hours.
+            How busy the cluster CPU was across the last day.
           </Typography>
         </Box>
       </Stack>
@@ -33,14 +34,15 @@ export default function CpuUsageChart({ history }: CpuUsageChartProps) {
           <AreaChart data={history} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="cpuFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#155EEF" stopOpacity={0.18} />
-                <stop offset="100%" stopColor="#155EEF" stopOpacity={0.02} />
+                <stop offset="0%" stopColor={colors.pink} stopOpacity={0.7} />
+                <stop offset="45%" stopColor={colors.blue} stopOpacity={0.18} />
+                <stop offset="100%" stopColor={colors.green} stopOpacity={0.05} />
               </linearGradient>
             </defs>
-            <CartesianGrid vertical={false} stroke="#EEF2F6" />
+            <CartesianGrid vertical={false} stroke={colors.grid} />
             <XAxis
               dataKey="time"
-              tick={{ fill: '#98A2B3', fontSize: 12 }}
+              tick={{ fill: colors.tick, fontSize: 12 }}
               axisLine={false}
               tickLine={false}
               dy={8}
@@ -48,7 +50,7 @@ export default function CpuUsageChart({ history }: CpuUsageChartProps) {
             <YAxis
               domain={[0, 100]}
               ticks={[0, 25, 50, 75, 100]}
-              tick={{ fill: '#98A2B3', fontSize: 12 }}
+              tick={{ fill: colors.tick, fontSize: 12 }}
               tickFormatter={(value) => `${value}%`}
               axisLine={false}
               tickLine={false}
@@ -56,10 +58,10 @@ export default function CpuUsageChart({ history }: CpuUsageChartProps) {
             />
             <Tooltip
               formatter={(value) => [formatPercent(Number(value ?? 0)), 'CPU']}
-              cursor={{ stroke: '#D0D5DD', strokeWidth: 1 }}
+              cursor={{ stroke: colors.line, strokeWidth: 1 }}
               contentStyle={{
                 borderRadius: 8,
-                border: '1px solid #E4E7EC',
+                border: `1px solid ${colors.line}`,
                 boxShadow: '0 8px 24px rgba(16, 24, 40, 0.08)',
                 fontSize: 13,
               }}
@@ -68,11 +70,11 @@ export default function CpuUsageChart({ history }: CpuUsageChartProps) {
               type="monotone"
               dataKey="usage"
               name="CPU"
-              stroke="#155EEF"
-              strokeWidth={2}
+              stroke={colors.blue}
+              strokeWidth={2.5}
               fill="url(#cpuFill)"
               dot={false}
-              activeDot={{ r: 4, strokeWidth: 0, fill: '#155EEF' }}
+              activeDot={{ r: 4, strokeWidth: 0, fill: colors.blue }}
               isAnimationActive={false}
             />
           </AreaChart>
@@ -100,8 +102,8 @@ function Stat({ label, value, helper }: { label: string; value: string; helper: 
       sx={{
         px: 2.5,
         py: 1.75,
-        borderTop: { xs: '1px solid #EEF2F6', sm: 'none' },
-        borderLeft: { sm: '1px solid #EEF2F6' },
+        borderTop: { xs: `1px solid ${colors.grid}`, sm: 'none' },
+        borderLeft: { sm: `1px solid ${colors.grid}` },
         '&:first-of-type': { borderLeft: 'none', borderTop: 'none' },
       }}
     >

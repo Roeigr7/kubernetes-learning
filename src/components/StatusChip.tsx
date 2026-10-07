@@ -1,16 +1,17 @@
 import { Chip } from '@mui/material'
+import { colors } from '../colors.ts'
 
 const statusStyles: Record<string, { color: string; background: string; border: string }> = {
-  Running: { color: '#067647', background: '#ECFDF3', border: '#ABEFC6' },
-  Ready: { color: '#067647', background: '#ECFDF3', border: '#ABEFC6' },
-  Healthy: { color: '#067647', background: '#ECFDF3', border: '#ABEFC6' },
-  Succeeded: { color: '#067647', background: '#ECFDF3', border: '#ABEFC6' },
-  Pending: { color: '#B54708', background: '#FFFAEB', border: '#FEDF89' },
-  CrashLoopBackOff: { color: '#B42318', background: '#FEF3F2', border: '#FECDCA' },
-  NotReady: { color: '#B42318', background: '#FEF3F2', border: '#FECDCA' },
+  Running: { color: colors.healthy, background: colors.healthyBg, border: colors.healthyBorder },
+  Ready: { color: colors.healthy, background: colors.healthyBg, border: colors.healthyBorder },
+  Healthy: { color: colors.healthy, background: colors.healthyBg, border: colors.healthyBorder },
+  Succeeded: { color: colors.healthy, background: colors.healthyBg, border: colors.healthyBorder },
+  Pending: { color: colors.warning, background: colors.warningBg, border: colors.warningBorder },
+  CrashLoopBackOff: { color: colors.critical, background: colors.criticalBg, border: colors.criticalBorder },
+  NotReady: { color: colors.critical, background: colors.criticalBg, border: colors.criticalBorder },
 }
 
-const fallbackStyle = { color: '#344054', background: '#F2F4F7', border: '#E4E7EC' }
+const fallbackStyle = { color: colors.ink, background: colors.paperMuted, border: colors.line }
 
 type StatusChipProps = {
   status: string

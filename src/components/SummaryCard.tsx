@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Avatar, Box, Card, CardContent, Stack, Typography } from '@mui/material'
+import { colors } from '../colors.ts'
 import TrendingDownIcon from '@mui/icons-material/TrendingDown'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 
@@ -27,7 +28,7 @@ export default function SummaryCard({
   statusDot,
 }: SummaryCardProps) {
   return (
-    <Card sx={{ height: '100%', borderTop: accent ? `3px solid ${accent}` : undefined }}>
+    <Card sx={{ borderTop: accent ? `3px solid ${accent}` : undefined }}>
       <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
         <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start' }}>
           <Avatar
@@ -80,7 +81,7 @@ export default function SummaryCard({
 function TrendIndicator({ trend }: { trend: number }) {
   const rising = trend > 0
   const flat = trend === 0
-  const color = flat ? '#667085' : rising ? '#B54708' : '#067647'
+  const color = flat ? colors.slate : rising ? colors.warning : colors.healthy
   const Icon = rising ? TrendingUpIcon : TrendingDownIcon
   const label = `${rising ? '+' : ''}${trend} pts`
 
@@ -91,7 +92,7 @@ function TrendIndicator({ trend }: { trend: number }) {
       sx={{
         alignItems: 'center',
         color,
-        bgcolor: rising ? '#FFFAEB' : flat ? '#F2F4F7' : '#ECFDF3',
+        bgcolor: rising ? colors.warningBg : flat ? colors.paperMuted : colors.healthyBg,
         borderRadius: 1,
         px: 0.75,
         py: 0.25,
