@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Box, Breadcrumbs, Chip, Stack, Typography } from '@mui/material'
+import { Box, Grid, Typography } from '@mui/material'
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined'
 import DnsOutlinedIcon from '@mui/icons-material/DnsOutlined'
 import SpeedOutlinedIcon from '@mui/icons-material/SpeedOutlined'
@@ -11,7 +11,6 @@ import InfrastructureTopology from '../components/InfrastructureTopology.tsx'
 import PodDistributionChart from '../components/PodDistributionChart.tsx'
 import SummaryCard from '../components/SummaryCard.tsx'
 import WorkloadsTable from '../components/WorkloadsTable.tsx'
-import { titleCase } from '../utils/format.ts'
 
 export default function InfrastructureDashboard() {
   const data = getInfrastructure()
@@ -23,9 +22,8 @@ export default function InfrastructureDashboard() {
     readyNodes === data.nodes.length ? 'All nodes ready' : `${readyNodes} of ${data.nodes.length} ready`
 
   const history = data.cpuHistory
-  const currentCpu = history[history.length - 1]?.usage ?? data.cluster.cpuUtilization
-  const previousCpu = history[history.length - 2]?.usage ?? currentCpu
-  const cpuDelta = currentCpu - previousCpu
+  const previousCpu = history[history.length - 2]?.usage ?? data.cluster.cpuUtilization
+  const cpuDelta = data.cluster.cpuUtilization - previousCpu
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -40,39 +38,12 @@ export default function InfrastructureDashboard() {
       />
 
       <Box sx={{ maxWidth: 1440, mx: 'auto', px: { xs: 2, md: 3 }, py: 3 }}>
-        <Stack spacing={2.5}>
-          <Stack spacing={0.75}>
-            <Breadcrumbs aria-label="Infrastructure path" sx={{ '& .MuiTypography-root': { fontSize: 13 } }}>
-              <Typography sx={{ color: 'text.secondary' }}>AWS Cloud</Typography>
-              <Typography sx={{ color: 'text.secondary' }}>Kubernetes</Typography>
-              <Typography sx={{ color: 'text.primary', fontWeight: 600 }}>{data.cluster.name}</Typography>
-            </Breadcrumbs>
-            <Stack
-              direction={{ xs: 'column', sm: 'row' }}
-              spacing={1}
-              sx={{ justifyContent: 'space-between', alignItems: { sm: 'flex-end' } }}
-            >
-              <Box>
-                <Typography sx={{ fontSize: 22, fontWeight: 600, letterSpacing: -0.3 }}>Infrastructure</Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
-                  {data.cluster.provider} · Kubernetes {data.cluster.kubernetesVersion} · {region} · Updated {data.cluster.updatedAt}
-                </Typography>
-              </Box>
-              <Chip
-                size="small"
-                label={titleCase(environment)}
-                sx={{ alignSelf: { xs: 'flex-start', sm: 'center' }, bgcolor: '#ECFDF3', color: '#067647', border: '1px solid #ABEFC6' }}
-              />
-            </Stack>
-          </Stack>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+          {data.cluster.provider} · {data.cluster.name} · Kubernetes {data.cluster.kubernetesVersion} · {region}
+        </Typography>
 
-          <Box
-            sx={{
-              display: 'grid',
-              gap: 2,
-              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(4, 1fr)' },
-            }}
-          >
+        <Grid container spacing={2.5}>
+          <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
             <SummaryCard
               label="Cluster status"
               value={data.cluster.status}
@@ -83,6 +54,8 @@ export default function InfrastructureDashboard() {
               accent="#12B76A"
               statusDot="#12B76A"
             />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
             <SummaryCard
               label="Nodes"
               value={String(data.cluster.nodes)}
@@ -91,6 +64,8 @@ export default function InfrastructureDashboard() {
               iconColor="#155EEF"
               iconBackground="#EFF4FF"
             />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
             <SummaryCard
               label="Pods"
               value={String(data.cluster.pods)}
@@ -99,42 +74,43 @@ export default function InfrastructureDashboard() {
               iconColor="#6941C6"
               iconBackground="#F4F3FF"
             />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
             <SummaryCard
               label="CPU utilization"
-              value={`${currentCpu}%`}
+              value={`${data.cluster.cpuUtilization}%`}
               helper="vs prior sample"
               icon={<SpeedOutlinedIcon sx={{ fontSize: 20 }} />}
               iconColor="#B54708"
               iconBackground="#FFFAEB"
               trend={cpuDelta}
             />
-          </Box>
+          </Grid>
 
-          <Box
-            sx={{
-              display: 'grid',
-              gap: 2.5,
-              alignItems: 'start',
-              gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 2fr) minmax(300px, 1fr)' },
-            }}
-          >
+          <Grid size={{ xs: 12, lg: 8 }}>
             <WorkloadsTable workloads={data.workloads} />
+          </Grid>
+          <Grid size={{ xs: 12, lg: 4 }} sx={{ alignSelf: 'start' }}>
             <PodDistributionChart distribution={data.podDistribution} />
-          </Box>
+          </Grid>
 
-          <CpuUsageChart history={data.cpuHistory} />
+          <Grid size={12}>
+            <CpuUsageChart history={data.cpuHistory} />
+          </Grid>
 
-          <InfrastructureTopology
-            cluster={data.cluster}
-            region={region}
-            nodes={data.nodes}
-            workloads={data.workloads}
-          />
+          <Grid size={12}>
+            <InfrastructureTopology
+              cluster={data.cluster}
+              region={region}
+              nodes={data.nodes}
+              workloads={data.workloads}
+            />
+          </Grid>
+        </Grid>
 
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Snapshot loaded from local mock data for {data.company.name}. This dashboard is not connected to a live cluster.
-          </Typography>
-        </Stack>
+        <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mt: 2.5 }}>
+          Snapshot loaded from local mock data for {data.company.name}. Updated {data.cluster.updatedAt}.
+        </Typography>
       </Box>
     </Box>
   )

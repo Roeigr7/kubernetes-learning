@@ -27,7 +27,7 @@ export default function SummaryCard({
   statusDot,
 }: SummaryCardProps) {
   return (
-    <Card sx={{ borderTop: accent ? `3px solid ${accent}` : undefined }}>
+    <Card sx={{ height: '100%', borderTop: accent ? `3px solid ${accent}` : undefined }}>
       <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
         <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start' }}>
           <Avatar
