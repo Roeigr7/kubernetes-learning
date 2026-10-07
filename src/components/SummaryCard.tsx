@@ -1,0 +1,106 @@
+import type { ReactNode } from 'react'
+import { Avatar, Box, Card, CardContent, Stack, Typography } from '@mui/material'
+import TrendingDownIcon from '@mui/icons-material/TrendingDown'
+import TrendingUpIcon from '@mui/icons-material/TrendingUp'
+
+type SummaryCardProps = {
+  label: string
+  value: string
+  helper: string
+  icon: ReactNode
+  iconColor: string
+  iconBackground: string
+  accent?: string
+  trend?: number
+  statusDot?: string
+}
+
+export default function SummaryCard({
+  label,
+  value,
+  helper,
+  icon,
+  iconColor,
+  iconBackground,
+  accent,
+  trend,
+  statusDot,
+}: SummaryCardProps) {
+  return (
+    <Card sx={{ borderTop: accent ? `3px solid ${accent}` : undefined }}>
+      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start' }}>
+          <Avatar
+            variant="rounded"
+            sx={{
+              width: 36,
+              height: 36,
+              bgcolor: iconBackground,
+              color: iconColor,
+            }}
+          >
+            {icon}
+          </Avatar>
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Typography
+              variant="caption"
+              sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: 0.4 }}
+            >
+              {label.toUpperCase()}
+            </Typography>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.25 }}>
+              {statusDot ? (
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    bgcolor: statusDot,
+                    flexShrink: 0,
+                  }}
+                />
+              ) : null}
+              <Typography sx={{ fontSize: 26, fontWeight: 600, letterSpacing: -0.4, lineHeight: 1.15 }}>
+                {value}
+              </Typography>
+            </Stack>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.75 }}>
+              {trend !== undefined ? <TrendIndicator trend={trend} /> : null}
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                {helper}
+              </Typography>
+            </Stack>
+          </Box>
+        </Stack>
+      </CardContent>
+    </Card>
+  )
+}
+
+function TrendIndicator({ trend }: { trend: number }) {
+  const rising = trend > 0
+  const flat = trend === 0
+  const color = flat ? '#667085' : rising ? '#B54708' : '#067647'
+  const Icon = rising ? TrendingUpIcon : TrendingDownIcon
+  const label = `${rising ? '+' : ''}${trend} pts`
+
+  return (
+    <Stack
+      direction="row"
+      spacing={0.25}
+      sx={{
+        alignItems: 'center',
+        color,
+        bgcolor: rising ? '#FFFAEB' : flat ? '#F2F4F7' : '#ECFDF3',
+        borderRadius: 1,
+        px: 0.75,
+        py: 0.25,
+      }}
+    >
+      {flat ? null : <Icon sx={{ fontSize: 14 }} />}
+      <Typography variant="caption" sx={{ fontWeight: 700, color: 'inherit' }}>
+        {label}
+      </Typography>
+    </Stack>
+  )
+}
