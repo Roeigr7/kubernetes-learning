@@ -14,40 +14,53 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import SearchIcon from '@mui/icons-material/Search'
 import { colors } from '../colors.ts'
-import type { Workload } from '../types/infrastructure.ts'
+import type { Workload, WorkloadResources } from '../types/infrastructure.ts'
 import StatusChip from './StatusChip.tsx'
 import UsageMeter from './UsageMeter.tsx'
 
-type SortKey = 'name' | 'namespace' | 'node' | 'pod' | 'cpu' | 'memory' | 'status' | 'restarts'
+type SortKey = 'name' | 'namespace' | 'node' | 'pod' | 'cpu' | 'memory' | 'status'
 type SortState = { key: SortKey; direction: 'asc' | 'desc' }
 
-const columns: { key: SortKey; label: string; numeric?: boolean }[] = [
-  { key: 'name', label: 'Workload' },
-  { key: 'namespace', label: 'Namespace' },
-  { key: 'node', label: 'Node' },
-  { key: 'pod', label: 'Pod' },
-  { key: 'cpu', label: 'CPU', numeric: true },
-  { key: 'memory', label: 'Memory', numeric: true },
-  { key: 'status', label: 'Status' },
-  { key: 'restarts', label: 'Restarts', numeric: true },
+const columns: { key: SortKey; label: string; hint: string; numeric?: boolean }[] = [
+  { key: 'name', label: 'Workload', hint: 'The application. It runs pods, and the pods run on the servers.' },
+  { key: 'namespace', label: 'Namespace', hint: 'The logical group of the pod.' },
+  { key: 'node', label: 'Node', hint: 'The server the pod runs on.' },
+  { key: 'pod', label: 'Pod', hint: 'The smallest unit Kubernetes runs. It sits on a server, with one or more containers running inside it.' },
+  { key: 'cpu', label: 'CPU', hint: 'Usage as a percent of the workload request.', numeric: true },
+  { key: 'memory', label: 'Memory', hint: 'Usage as a percent of the workload request.', numeric: true },
+  { key: 'status', label: 'Status', hint: 'Whether the pod is running.' },
 ]
+
+const tooltipSlotProps = {
+  tooltip: {
+    sx: { fontSize: 13, px: 1.25, py: 0.75, maxWidth: 260 },
+  },
+}
 
 const PAGE_SIZE = 10
 
 type WorkloadsTableProps = {
   workloads: Workload[]
+  resources: WorkloadResources[]
 }
 
-export default function WorkloadsTable({ workloads }: WorkloadsTableProps) {
+type WorkloadRow = Workload & {
+  cpuUsed: number
+  cpuRequest: number
+  memoryUsed: number
+  memoryRequest: number
+}
+
+export default function WorkloadsTable({ workloads, resources }: WorkloadsTableProps) {
   const [query, setQuery] = useState('')
   const [namespace, setNamespace] = useState('all')
-  const [status, setStatus] = useState('all')
   const [sort, setSort] = useState<SortState | null>(null)
   const [loadedCount, setLoadedCount] = useState(PAGE_SIZE)
   const [loading, setLoading] = useState(false)
@@ -63,22 +76,17 @@ export default function WorkloadsTable({ workloads }: WorkloadsTableProps) {
     () => Array.from(new Set(workloads.map((workload) => workload.namespace))).sort(),
     [workloads],
   )
-  const statuses = useMemo(
-    () => Array.from(new Set(workloads.map((workload) => workload.status))).sort(),
-    [workloads],
-  )
-
   const visibleWorkloads = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
-    const filtered = workloads.filter((workload) => {
+    const filtered = workloads.map((workload) => withUsage(workload, resources)).filter((workload) => {
       const matchesQuery =
         normalizedQuery.length === 0 ||
         workload.name.toLowerCase().includes(normalizedQuery) ||
         workload.pod.toLowerCase().includes(normalizedQuery) ||
-        workload.node.toLowerCase().includes(normalizedQuery)
+        workload.node.toLowerCase().includes(normalizedQuery) ||
+        workload.containers.some((container) => container.toLowerCase().includes(normalizedQuery))
       const matchesNamespace = namespace === 'all' || workload.namespace === namespace
-      const matchesStatus = status === 'all' || workload.status === status
-      return matchesQuery && matchesNamespace && matchesStatus
+      return matchesQuery && matchesNamespace
     })
 
     if (!sort) return filtered
@@ -94,7 +102,7 @@ export default function WorkloadsTable({ workloads }: WorkloadsTableProps) {
     })
 
     return sorted
-  }, [namespace, query, sort, status, workloads])
+  }, [namespace, query, resources, sort, workloads])
 
   const shownWorkloads = visibleWorkloads.slice(0, loadedCount)
   stateRef.current = { loadedCount, total: visibleWorkloads.length }
@@ -105,7 +113,7 @@ export default function WorkloadsTable({ workloads }: WorkloadsTableProps) {
     loadingRef.current = false
     if (loadTimer.current !== null) window.clearTimeout(loadTimer.current)
     if (scrollRef.current) scrollRef.current.scrollTop = 0
-  }, [namespace, query, sort, status])
+  }, [namespace, query, sort])
 
   useEffect(() => {
     return () => {
@@ -184,7 +192,7 @@ export default function WorkloadsTable({ workloads }: WorkloadsTableProps) {
   }
 
   return (
-    <Card id="kubernetes-workloads" sx={{ overflow: 'hidden' }}>
+    <Card id="kubernetes-workloads" sx={{ overflow: 'hidden', height: '100%' }}>
       <Stack
         spacing={1.5}
         sx={{ px: 2.5, pt: 2, pb: 1.5 }}
@@ -218,7 +226,7 @@ export default function WorkloadsTable({ workloads }: WorkloadsTableProps) {
                 ),
               },
             }}
-            sx={{ flex: 1, minWidth: 220 }}
+            sx={{ flex: 1, minWidth: 0, width: '100%' }}
           />
           <TextField
             select
@@ -226,25 +234,10 @@ export default function WorkloadsTable({ workloads }: WorkloadsTableProps) {
             label="Namespace"
             value={namespace}
             onChange={(event) => setNamespace(event.target.value)}
-            sx={{ minWidth: 160 }}
+            sx={{ minWidth: 0, width: { xs: '100%', md: 180 } }}
           >
             <MenuItem value="all">All namespaces</MenuItem>
             {namespaces.map((item) => (
-              <MenuItem key={item} value={item}>
-                {item}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            size="small"
-            label="Status"
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
-            sx={{ minWidth: 150 }}
-          >
-            <MenuItem value="all">All statuses</MenuItem>
-            {statuses.map((item) => (
               <MenuItem key={item} value={item}>
                 {item}
               </MenuItem>
@@ -283,24 +276,26 @@ export default function WorkloadsTable({ workloads }: WorkloadsTableProps) {
                 const SortIcon = sort?.direction === 'asc' ? ArrowUpwardIcon : ArrowDownwardIcon
                 return (
                   <TableCell key={column.key} sortDirection={active ? sort.direction : false}>
-                    <Box
-                      component="button"
-                      type="button"
-                      onClick={() => toggleSort(column.key)}
-                      sx={{
-                        all: 'unset',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 0.5,
-                        font: 'inherit',
-                        fontWeight: 600,
-                        color: active ? 'text.primary' : 'inherit',
-                      }}
-                    >
-                      {column.label}
-                      {active ? <SortIcon sx={{ fontSize: 14 }} /> : null}
-                    </Box>
+                    <Tooltip title={column.hint} describeChild arrow placement="top" slotProps={tooltipSlotProps}>
+                      <Box
+                        component="button"
+                        type="button"
+                        onClick={() => toggleSort(column.key)}
+                        sx={{
+                          all: 'unset',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 0.5,
+                          font: 'inherit',
+                          fontWeight: 600,
+                          color: active ? 'text.primary' : 'inherit',
+                        }}
+                      >
+                        {column.label}
+                        {active ? <SortIcon sx={{ fontSize: 14 }} /> : null}
+                      </Box>
+                    </Tooltip>
                   </TableCell>
                 )
               })}
@@ -333,9 +328,11 @@ export default function WorkloadsTable({ workloads }: WorkloadsTableProps) {
                       </Avatar>
                       <Box sx={{ minWidth: 0 }}>
                         <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{workload.name}</Typography>
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                          container/{workload.container}
-                        </Typography>
+                        <Tooltip title="A running image inside the pod. The image is the software package, and the container is that package running." describeChild arrow placement="top" slotProps={tooltipSlotProps}>
+                          <Typography variant="caption" sx={{ color: 'text.secondary', cursor: 'help', width: 'fit-content' }}>
+                            {workload.containers.map((container) => `container/${container}`).join(' · ')}
+                          </Typography>
+                        </Tooltip>
                       </Box>
                     </Stack>
                   </TableCell>
@@ -363,25 +360,21 @@ export default function WorkloadsTable({ workloads }: WorkloadsTableProps) {
                     </Typography>
                   </TableCell>
                   <TableCell sx={{ width: 108 }}>
-                    <UsageMeter value={workload.cpu} />
+                    <Tooltip title={usageHint('cores', workload.cpuUsed, workload.cpuRequest)} describeChild arrow placement="top" slotProps={tooltipSlotProps}>
+                      <Box sx={{ cursor: 'help' }}>
+                        <UsageMeter value={workload.cpu} />
+                      </Box>
+                    </Tooltip>
                   </TableCell>
                   <TableCell sx={{ width: 108 }}>
-                    <UsageMeter value={workload.memory} />
+                    <Tooltip title={usageHint('Gi', workload.memoryUsed, workload.memoryRequest)} describeChild arrow placement="top" slotProps={tooltipSlotProps}>
+                      <Box sx={{ cursor: 'help' }}>
+                        <UsageMeter value={workload.memory} />
+                      </Box>
+                    </Tooltip>
                   </TableCell>
                   <TableCell>
                     <StatusChip status={workload.status} />
-                  </TableCell>
-                  <TableCell>
-                    <Typography
-                      sx={{
-                        fontSize: 13,
-                        fontWeight: 700,
-                        fontVariantNumeric: 'tabular-nums',
-                        color: workload.restarts > 0 ? colors.warning : 'text.secondary',
-                      }}
-                    >
-                      {workload.restarts}
-                    </Typography>
                   </TableCell>
                 </TableRow>
               ))
@@ -398,6 +391,35 @@ export default function WorkloadsTable({ workloads }: WorkloadsTableProps) {
       </Box>
     </Card>
   )
+}
+
+function withUsage(workload: Workload, resources: WorkloadResources[]): WorkloadRow {
+  const resource = resources.find((item) => item.name === workload.name)
+  const cpu = percentOf(resource?.cpu.used ?? 0, resource?.cpu.request ?? 0)
+  const memory = percentOf(resource?.memory.used ?? 0, resource?.memory.request ?? 0)
+  return {
+    ...workload,
+    cpu: cpu.percent,
+    memory: memory.percent,
+    cpuUsed: resource?.cpu.used ?? 0,
+    cpuRequest: resource?.cpu.request ?? 0,
+    memoryUsed: resource?.memory.used ?? 0,
+    memoryRequest: resource?.memory.request ?? 0,
+  }
+}
+
+function percentOf(used: number, request: number) {
+  if (request <= 0) return { percent: 0 }
+  return { percent: Math.round((used / request) * 100) }
+}
+
+function usageHint(unit: string, used: number, request: number) {
+  return `Used ${formatAmount(used)} ${unit} · Request ${formatAmount(request)} ${unit}`
+}
+
+function formatAmount(value: number) {
+  const rounded = Math.round(value * 10) / 10
+  return Number.isInteger(rounded) ? String(rounded) : String(rounded)
 }
 
 function initials(name: string): string {

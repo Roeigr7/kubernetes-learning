@@ -7,10 +7,10 @@
     "regions": ["us-east-1"]
   },
   "user": {
-    "name": "Sam Lee",
-    "email": "sam.lee@kube-learn.dev",
+    "name": "Roei Grinshpan",
+    "email": "roei.grinshpan@kube-learn.dev",
     "role": "Student",
-    "initials": "SL"
+    "initials": "RG"
   },
   "notifications": [
     {
@@ -21,14 +21,14 @@
     },
     {
       "id": "note-2",
-      "title": "user workload is on every node",
-      "detail": "One user pod runs on node-1, node-2, and node-3.",
+      "title": "namespace production is on every node",
+      "detail": "The production namespace has one pod on node-1, node-2, and node-3.",
       "time": "25 min ago"
     },
     {
       "id": "note-3",
-      "title": "feed workload uses two nodes",
-      "detail": "Feed pods run on node-2 and node-3. node-1 has only the user pod.",
+      "title": "namespace stage uses two nodes",
+      "detail": "The stage namespace runs on node-1 and node-2. node-3 has only the production namespace.",
       "time": "1 hr ago"
     }
   ],
@@ -38,9 +38,9 @@
     "kubernetesVersion": "1.31",
     "provider": "Amazon EKS",
     "nodes": 3,
-    "pods": 5,
-    "containers": 5,
-    "runningPods": 5,
+    "pods": 6,
+    "containers": 8,
+    "runningPods": 6,
     "cpuUtilization": 44,
     "updatedAt": "07 Oct 2026 · 14:10 UTC"
   },
@@ -51,9 +51,9 @@
       "type": "Server",
       "instanceType": "small",
       "status": "Ready",
-      "cpuUsage": 30,
-      "memoryUsage": 40,
-      "pods": 1,
+      "cpuUsage": 38,
+      "memoryUsage": 46,
+      "pods": 2,
       "region": "us-east-1"
     },
     {
@@ -62,9 +62,9 @@
       "type": "Server",
       "instanceType": "small",
       "status": "Ready",
-      "cpuUsage": 42,
-      "memoryUsage": 50,
-      "pods": 2,
+      "cpuUsage": 55,
+      "memoryUsage": 62,
+      "pods": 3,
       "region": "us-east-1"
     },
     {
@@ -73,19 +73,19 @@
       "type": "Server",
       "instanceType": "small",
       "status": "Ready",
-      "cpuUsage": 40,
-      "memoryUsage": 47,
-      "pods": 2,
+      "cpuUsage": 34,
+      "memoryUsage": 42,
+      "pods": 1,
       "region": "us-east-1"
     }
   ],
   "workloads": [
     {
       "name": "user workload",
-      "namespace": "facebook",
+      "namespace": "production",
       "node": "node-1",
       "pod": "user-pod-1",
-      "container": "user",
+      "containers": ["user", "user-logger"],
       "cpu": 30,
       "memory": 40,
       "status": "Running",
@@ -93,10 +93,10 @@
     },
     {
       "name": "user workload",
-      "namespace": "facebook",
+      "namespace": "production",
       "node": "node-2",
       "pod": "user-pod-2",
-      "container": "user",
+      "containers": ["user"],
       "cpu": 36,
       "memory": 44,
       "status": "Running",
@@ -104,10 +104,10 @@
     },
     {
       "name": "user workload",
-      "namespace": "facebook",
+      "namespace": "production",
       "node": "node-3",
       "pod": "user-pod-3",
-      "container": "user",
+      "containers": ["user"],
       "cpu": 34,
       "memory": 42,
       "status": "Running",
@@ -115,10 +115,10 @@
     },
     {
       "name": "feed workload",
-      "namespace": "facebook",
+      "namespace": "stage",
       "node": "node-2",
       "pod": "feed-pod-1",
-      "container": "feed",
+      "containers": ["feed", "feed-logger"],
       "cpu": 48,
       "memory": 55,
       "status": "Running",
@@ -126,15 +126,53 @@
     },
     {
       "name": "feed workload",
-      "namespace": "facebook",
-      "node": "node-3",
+      "namespace": "stage",
+      "node": "node-2",
+      "pod": "feed-pod-3",
+      "containers": ["feed"],
+      "cpu": 40,
+      "memory": 48,
+      "status": "Running",
+      "restarts": 0
+    },
+    {
+      "name": "feed workload",
+      "namespace": "stage",
+      "node": "node-1",
       "pod": "feed-pod-2",
-      "container": "feed",
+      "containers": ["feed"],
       "cpu": 46,
       "memory": 52,
       "status": "Running",
       "restarts": 0
     }
+  ],
+  "workloadResources": [
+    {
+      "name": "user workload",
+      "cpu": { "used": 1, "request": 2, "limit": 6, "possible": 10 },
+      "memory": { "used": 3, "request": 3, "limit": 8, "possible": 10 }
+    },
+    {
+      "name": "feed workload",
+      "cpu": { "used": 3.5, "request": 1, "limit": 4, "possible": 15 },
+      "memory": { "used": 6, "request": 5, "limit": 7, "possible": 15 }
+    }
+  ],
+  "workloadDay": [
+    { "time": "00:00", "userCpu": 0.5, "userMemory": 1, "feedCpu": 1.5, "feedMemory": 3 },
+    { "time": "02:00", "userCpu": 1.5, "userMemory": 2.5, "feedCpu": 3, "feedMemory": 5 },
+    { "time": "04:00", "userCpu": 0.5, "userMemory": 1.5, "feedCpu": 2, "feedMemory": 3.5 },
+    { "time": "06:00", "userCpu": 2, "userMemory": 3, "feedCpu": 4, "feedMemory": 6 },
+    { "time": "08:00", "userCpu": 3, "userMemory": 5, "feedCpu": 5, "feedMemory": 7 },
+    { "time": "10:00", "userCpu": 1, "userMemory": 2, "feedCpu": 2.5, "feedMemory": 4 },
+    { "time": "12:00", "userCpu": 2.5, "userMemory": 4, "feedCpu": 3.5, "feedMemory": 5.5 },
+    { "time": "14:00", "userCpu": 3.5, "userMemory": 5.5, "feedCpu": 4.5, "feedMemory": 6.5 },
+    { "time": "16:00", "userCpu": 1.5, "userMemory": 2.5, "feedCpu": 2, "feedMemory": 4.5 },
+    { "time": "18:00", "userCpu": 2.5, "userMemory": 4.5, "feedCpu": 4, "feedMemory": 6 },
+    { "time": "20:00", "userCpu": 0.5, "userMemory": 1.5, "feedCpu": 1.5, "feedMemory": 3 },
+    { "time": "22:00", "userCpu": 1.5, "userMemory": 3, "feedCpu": 3.5, "feedMemory": 5.5 },
+    { "time": "24:00", "userCpu": 1, "userMemory": 3, "feedCpu": 3.5, "feedMemory": 6 }
   ],
   "cpuHistory": [
     { "time": "00:00", "usage": 30 },
@@ -146,8 +184,8 @@
     { "time": "24:00", "usage": 44 }
   ],
   "podDistribution": [
-    { "name": "node-1", "pods": 1 },
-    { "name": "node-2", "pods": 2 },
-    { "name": "node-3", "pods": 2 }
+    { "name": "node-1", "pods": 2 },
+    { "name": "node-2", "pods": 3 },
+    { "name": "node-3", "pods": 1 }
   ]
 }

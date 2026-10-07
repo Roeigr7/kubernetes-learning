@@ -22,6 +22,12 @@ export const colors = {
   paperMuted: '#F8FAFC',
   grid: '#EEF2F6',
   tick: '#98A2B3',
+  userWorkload: '#4C6EF5',
+  feedWorkload: '#12B886',
+  userCpu: '#4C6EF5',
+  userMemory: '#E64980',
+  feedCpu: '#12B886',
+  feedMemory: '#FD7E14',
 }
 
 export const seriesColors = ['#22C55E', '#3B82F6', '#FB7185']

@@ -56,7 +56,7 @@ export default function DashboardHeader({
     >
       <Stack
         direction="row"
-        spacing={2}
+        useFlexGap
         sx={{
           alignItems: 'center',
           minHeight: 64,
@@ -64,9 +64,10 @@ export default function DashboardHeader({
           py: 1,
           gap: 1.5,
           flexWrap: 'wrap',
+          minWidth: 0,
         }}
       >
-        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
           <Box
             sx={{
               width: 32,
@@ -83,7 +84,7 @@ export default function DashboardHeader({
           >
             {company.name.slice(0, 1)}
           </Box>
-          <Typography sx={{ fontWeight: 700, fontSize: 16, letterSpacing: -0.2 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: 16, letterSpacing: -0.2, minWidth: 0 }}>
             {company.name}
           </Typography>
         </Stack>
@@ -104,8 +105,19 @@ export default function DashboardHeader({
 
         <Box sx={{ flex: 1, display: { xs: 'none', md: 'block' } }} />
 
-        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', ml: { xs: 0, md: 'auto' } }}>
-          <FormControl size="small" sx={{ minWidth: { xs: 132, sm: 156 } }}>
+        <Stack
+          direction="row"
+          useFlexGap
+          sx={{
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 1,
+            flex: { xs: '1 1 100%', md: '0 0 auto' },
+            minWidth: 0,
+            ml: { md: 'auto' },
+          }}
+        >
+          <FormControl size="small" sx={{ minWidth: 0, flex: { xs: '1 1 120px', sm: '0 0 156px' }, maxWidth: '100%' }}>
             <InputLabel id="environment-label">Environment</InputLabel>
             <Select
               labelId="environment-label"
@@ -121,7 +133,7 @@ export default function DashboardHeader({
             </Select>
           </FormControl>
 
-          <FormControl size="small" sx={{ minWidth: { xs: 132, sm: 150 } }}>
+          <FormControl size="small" sx={{ minWidth: 0, flex: { xs: '1 1 120px', sm: '0 0 150px' }, maxWidth: '100%' }}>
             <InputLabel id="region-label">Region</InputLabel>
             <Select
               labelId="region-label"
@@ -168,7 +180,7 @@ export default function DashboardHeader({
         anchorEl={menuAnchor}
         open={Boolean(menuAnchor)}
         onClose={() => setMenuAnchor(null)}
-        slotProps={{ paper: { sx: { width: 360, mt: 1, border: '1px solid', borderColor: colors.line, boxShadow: '0 12px 32px rgba(18, 23, 42, 0.12)' } } }}
+        slotProps={{ paper: { sx: { width: { xs: 'min(360px, calc(100vw - 32px))', sm: 360 }, maxWidth: 'calc(100vw - 32px)', mt: 1, border: '1px solid', borderColor: colors.line, boxShadow: '0 12px 32px rgba(18, 23, 42, 0.12)' } } }}
       >
         <Box sx={{ px: 2, py: 1.25 }}>
           <Typography sx={{ fontWeight: 600, fontSize: 14 }}>Notifications</Typography>

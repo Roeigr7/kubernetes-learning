@@ -54,11 +54,32 @@ export interface Workload {
   namespace: string
   node: string
   pod: string
-  container: string
+  containers: string[]
   cpu: number
   memory: number
   status: WorkloadStatus
   restarts: number
+}
+
+export interface WorkloadAmount {
+  used: number
+  request: number
+  limit: number
+  possible: number
+}
+
+export interface WorkloadResources {
+  name: string
+  cpu: WorkloadAmount
+  memory: WorkloadAmount
+}
+
+export interface WorkloadHour {
+  time: string
+  userCpu: number
+  userMemory: number
+  feedCpu: number
+  feedMemory: number
 }
 
 export interface CpuSample {
@@ -78,6 +99,8 @@ export interface InfrastructureData {
   cluster: Cluster
   nodes: ClusterNode[]
   workloads: Workload[]
+  workloadResources: WorkloadResources[]
+  workloadDay: WorkloadHour[]
   cpuHistory: CpuSample[]
   podDistribution: PodDistributionItem[]
 }

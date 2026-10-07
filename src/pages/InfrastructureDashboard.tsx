@@ -5,7 +5,8 @@ import DnsOutlinedIcon from '@mui/icons-material/DnsOutlined'
 import SpeedOutlinedIcon from '@mui/icons-material/SpeedOutlined'
 import ViewInArIcon from '@mui/icons-material/ViewInAr'
 import { getInfrastructure } from '../api/getInfrastructure.ts'
-import CpuUsageChart from '../components/CpuUsageChart.tsx'
+import WorkloadResourcesCard from '../components/WorkloadResourcesCard.tsx'
+import WorkloadUsageChart from '../components/WorkloadUsageChart.tsx'
 import DashboardHeader from '../components/DashboardHeader.tsx'
 import InfrastructureTopology from '../components/InfrastructureTopology.tsx'
 import PodDistributionChart from '../components/PodDistributionChart.tsx'
@@ -18,6 +19,39 @@ export default function InfrastructureDashboard() {
   const data = getInfrastructure()
   const [environment, setEnvironment] = useState(data.company.environment)
   const [region, setRegion] = useState(data.company.region)
+  const [resources, setResources] = useState(() => copyResources(data.workloadResources))
+
+  function adjustResource(name: string, metric: 'cpu' | 'memory', field: 'request' | 'limit', direction: 'raise' | 'lower') {
+    setResources((current) =>
+      current.map((item) => {
+        if (item.name !== name) return item
+        const step = direction === 'raise' ? 0.5 : -0.5
+        const taken = new Set<number>()
+        for (const other of current) {
+          for (const key of ['cpu', 'memory'] as const) {
+            for (const part of ['request', 'limit'] as const) {
+              if (other.name === name && key === metric && part === field) continue
+              taken.add(other[key][part])
+            }
+          }
+        }
+        const amount = item[metric]
+        const fits = (value: number) => {
+          if (value > amount.possible) return false
+          if (field === 'request') return value >= 0.5 && value < amount.limit
+          return value > amount.request
+        }
+        let next = roundHalf(amount[field] + step)
+        for (let guard = 0; guard < 12 && (!fits(next) || taken.has(next)); guard += 1) {
+          const nudged = roundHalf(next + step)
+          if (nudged === next || !fits(nudged)) return item
+          next = nudged
+        }
+        if (!fits(next) || taken.has(next)) return item
+        return { ...item, [metric]: { ...amount, [field]: next } }
+      }),
+    )
+  }
 
   const readyNodes = data.nodes.filter((node) => node.status === 'Ready').length
   const nodesHelper =
@@ -29,7 +63,7 @@ export default function InfrastructureDashboard() {
   const cpuDelta = currentCpu - previousCpu
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', overflowX: 'clip' }}>
       <DashboardHeader
         company={data.company}
         user={data.user}
@@ -40,7 +74,7 @@ export default function InfrastructureDashboard() {
         onRegionChange={setRegion}
       />
 
-      <Box sx={{ maxWidth: 1440, mx: 'auto', px: { xs: 2, md: 3 }, py: 3 }}>
+      <Box sx={{ maxWidth: 1440, mx: 'auto', px: { xs: 2, md: 3 }, py: 3, minWidth: 0 }}>
         <Stack spacing={2.5}>
           <Stack spacing={0.75}>
             <Breadcrumbs aria-label="Infrastructure path" sx={{ '& .MuiTypography-root': { fontSize: 13 } }}>
@@ -56,10 +90,10 @@ export default function InfrastructureDashboard() {
               <Box>
                 <Typography sx={{ fontSize: 22, fontWeight: 600, letterSpacing: -0.3 }}>Kube-Learn (WRS)</Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25, maxWidth: 760 }}>
-                  A small Facebook-like app. The user workload runs on all 3 nodes. The feed workload runs on node-2 and node-3. node-1 has 1 pod. node-2 and node-3 have 2 pods each.
+                  production runs on every node. stage runs on node-1 and node-2.
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-                  {data.cluster.provider} · Kubernetes {data.cluster.kubernetesVersion} · {region} · Updated {data.cluster.updatedAt}
+                  {data.cluster.provider} {data.cluster.kubernetesVersion} · {region}
                 </Typography>
               </Box>
               <Chip
@@ -74,7 +108,7 @@ export default function InfrastructureDashboard() {
             sx={{
               display: 'grid',
               gap: 2,
-              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(4, 1fr)' },
+              gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'minmax(0, 1fr) minmax(0, 1fr)', lg: 'repeat(4, minmax(0, 1fr))' },
             }}
           >
             <SummaryCard
@@ -86,6 +120,7 @@ export default function InfrastructureDashboard() {
               iconBackground={colors.healthyBg}
               accent={colors.healthy}
               statusDot={colors.healthy}
+              hint="מצב הבריאות של הקלאסטר"
             />
             <SummaryCard
               label="Nodes"
@@ -94,14 +129,16 @@ export default function InfrastructureDashboard() {
               icon={<DnsOutlinedIcon sx={{ fontSize: 20 }} />}
               iconColor={colors.blue}
               iconBackground="#EFF6FF"
+              hint="כמה שרתים יש בקלאסטר"
             />
             <SummaryCard
               label="Pods"
               value={String(data.cluster.pods)}
-              helper={`${data.cluster.runningPods} running`}
+              helper={`${data.cluster.runningPods} running · ${data.cluster.containers} containers`}
               icon={<ViewInArIcon sx={{ fontSize: 20 }} />}
               iconColor={colors.navy}
               iconBackground={colors.paperMuted}
+              hint="כמה pods רצים בקלאסטר"
             />
             <SummaryCard
               label="CPU utilization"
@@ -111,6 +148,7 @@ export default function InfrastructureDashboard() {
               iconColor={colors.warning}
               iconBackground={colors.warningBg}
               trend={cpuDelta}
+              hint="אחוז השימוש ב-CPU של הקלאסטר"
             />
           </Box>
 
@@ -118,15 +156,33 @@ export default function InfrastructureDashboard() {
             sx={{
               display: 'grid',
               gap: 2.5,
-              alignItems: 'start',
-              gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 2fr) minmax(300px, 1fr)' },
+              alignItems: 'stretch',
+              gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 2fr) minmax(280px, 1fr)' },
             }}
           >
-            <WorkloadsTable workloads={data.workloads} />
-            <PodDistributionChart distribution={data.podDistribution} />
+            <WorkloadsTable workloads={data.workloads} resources={resources} />
+            <PodDistributionChart workloads={data.workloads} nodes={data.nodes.map((node) => node.name)} />
           </Box>
 
-          <CpuUsageChart history={data.cpuHistory} />
+          <Stack spacing={1.5}>
+            <Box>
+              <Typography sx={{ fontSize: 15, fontWeight: 600 }}>CPU and memory per workload</Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
+                Actual use across the day. Straight lines are request and limit.
+              </Typography>
+            </Box>
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2.5,
+                alignItems: 'stretch',
+                gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 9fr) minmax(280px, 3fr)' },
+              }}
+            >
+              <WorkloadUsageChart history={data.workloadDay} resources={resources} />
+              <WorkloadResourcesCard resources={resources} onAdjust={adjustResource} onReset={() => setResources(copyResources(data.workloadResources))} />
+            </Box>
+          </Stack>
 
           <InfrastructureTopology
             cluster={data.cluster}
@@ -136,10 +192,22 @@ export default function InfrastructureDashboard() {
           />
 
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Practice snapshot for {data.company.name}. Two workloads, three nodes, five pods, five containers. This dashboard is not connected to a live cluster.
+            Practice snapshot for {data.company.name}. Two workloads, three nodes, six pods, eight containers. user-pod-1 and feed-pod-1 each run two containers. This dashboard is not connected to a live cluster.
           </Typography>
         </Stack>
       </Box>
     </Box>
   )
+}
+
+function copyResources(items: import('../types/infrastructure.ts').WorkloadResources[]) {
+  return items.map((item) => ({
+    name: item.name,
+    cpu: { ...item.cpu },
+    memory: { ...item.memory },
+  }))
+}
+
+function roundHalf(value: number) {
+  return Math.round(value * 2) / 2
 }

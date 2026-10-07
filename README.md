@@ -1,6 +1,6 @@
 # Kube-Learn (WRS)
 
-A frontend dashboard for a small Facebook-like app used to learn Kubernetes. It shows how the platform is layered:
+A frontend dashboard for Kube-Learn, a small app used to learn Kubernetes. It shows how the platform is layered:
 
 AWS Cloud → Kubernetes cluster → nodes → pods → containers
 

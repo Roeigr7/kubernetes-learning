@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Avatar, Box, Card, CardContent, Stack, Typography } from '@mui/material'
+import { Avatar, Box, Card, CardContent, Stack, Tooltip, Typography } from '@mui/material'
 import { colors } from '../colors.ts'
 import TrendingDownIcon from '@mui/icons-material/TrendingDown'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
@@ -14,6 +14,7 @@ type SummaryCardProps = {
   accent?: string
   trend?: number
   statusDot?: string
+  hint?: string
 }
 
 export default function SummaryCard({
@@ -26,9 +27,10 @@ export default function SummaryCard({
   accent,
   trend,
   statusDot,
+  hint,
 }: SummaryCardProps) {
-  return (
-    <Card sx={{ borderTop: accent ? `3px solid ${accent}` : undefined }}>
+  const card = (
+    <Card sx={{ borderTop: accent ? `3px solid ${accent}` : undefined, cursor: hint ? 'help' : undefined, height: '100%' }}>
       <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
         <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start' }}>
           <Avatar
@@ -75,6 +77,23 @@ export default function SummaryCard({
         </Stack>
       </CardContent>
     </Card>
+  )
+
+  if (!hint) return card
+
+  return (
+    <Tooltip
+      title={hint}
+      arrow
+      placement="top"
+      slotProps={{
+        tooltip: {
+          sx: { direction: 'rtl', textAlign: 'right', fontSize: 13, px: 1.25, py: 0.75 },
+        },
+      }}
+    >
+      {card}
+    </Tooltip>
   )
 }
 

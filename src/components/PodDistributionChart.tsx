@@ -1,40 +1,70 @@
-import { Box, Card, Stack, Typography } from '@mui/material'
+import { useMemo, useState } from 'react'
+import { Box, Card, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { colors, seriesColors } from '../colors.ts'
-import type { PodDistributionItem } from '../types/infrastructure.ts'
+import type { Workload } from '../types/infrastructure.ts'
+
+type Filter = 'user' | 'feed' | 'both'
 
 type PodDistributionChartProps = {
-  distribution: PodDistributionItem[]
+  workloads: Workload[]
+  nodes: string[]
 }
 
-export default function PodDistributionChart({ distribution }: PodDistributionChartProps) {
+export default function PodDistributionChart({ workloads, nodes }: PodDistributionChartProps) {
+  const [filter, setFilter] = useState<Filter>('both')
+  const distribution = useMemo(
+    () =>
+      nodes.map((name) => ({
+        name,
+        pods: workloads.filter((workload) => workload.node === name && (filter === 'both' || workload.name.startsWith(filter))).length,
+      })),
+    [filter, nodes, workloads],
+  )
   const total = distribution.reduce((sum, item) => sum + item.pods, 0)
+  const slices = distribution.filter((item) => item.pods > 0)
 
   return (
-    <Card id="pod-distribution">
+    <Card id="pod-distribution" sx={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
       <Box sx={{ px: 2.5, pt: 2, pb: 0.5 }}>
-        <Typography sx={{ fontSize: 15, fontWeight: 600 }}>Pod Distribution</Typography>
+        <Stack direction="row" useFlexGap spacing={1} sx={{ alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+          <Typography sx={{ fontSize: 15, fontWeight: 600 }}>Pod Distribution</Typography>
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={filter}
+            onChange={(_event, next: Filter | null) => {
+              if (next) setFilter(next)
+            }}
+            aria-label="Pod distribution workload filter"
+            sx={{ flexShrink: 0 }}
+          >
+            <ToggleButton value="user">User</ToggleButton>
+            <ToggleButton value="feed">Feed</ToggleButton>
+            <ToggleButton value="both">Both</ToggleButton>
+          </ToggleButtonGroup>
+        </Stack>
         <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
-          node-1 runs 1 pod. node-2 and node-3 run 2 pods each.
+          {distribution.map((item) => `${item.name} runs ${item.pods} ${item.pods === 1 ? 'pod' : 'pods'}.`).join(' ')}
         </Typography>
       </Box>
 
-      <Box sx={{ position: 'relative', height: 240, mx: 1 }}>
+      <Box sx={{ position: 'relative', height: 300, mx: 1 }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              data={distribution}
+              data={slices}
               dataKey="pods"
               nameKey="name"
-              innerRadius={68}
-              outerRadius={92}
+              innerRadius={86}
+              outerRadius={118}
               paddingAngle={2}
               stroke="#FFFFFF"
               strokeWidth={2}
               isAnimationActive={false}
             >
-              {distribution.map((item, index) => (
-                <Cell key={item.name} fill={seriesColors[index % seriesColors.length]} />
+              {slices.map((item) => (
+                <Cell key={item.name} fill={seriesColors[nodes.indexOf(item.name) % seriesColors.length]} />
               ))}
             </Pie>
             <Tooltip
