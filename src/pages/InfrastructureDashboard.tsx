@@ -150,18 +150,19 @@ export default function InfrastructureDashboard() {
             <Box
               sx={{
                 display: 'flex',
-                alignItems: 'center',
+                alignItems: 'stretch',
                 columnGap: 2.5,
                 rowGap: 1,
                 flexWrap: 'wrap',
                 minWidth: 0,
-                minHeight: { xs: 48, sm: 52 },
+                '&&': { marginBlock: '8px' },
               }}
             >
               <Typography
                 sx={{
                   flex: '0 0 auto',
-                  fontSize: { xs: 24, sm: 28 },
+                  fontSize: '32px',
+                  marginTop: '-7px',
                   fontWeight: 700,
                   letterSpacing: -0.4,
                   lineHeight: 1.15,
@@ -173,8 +174,7 @@ export default function InfrastructureDashboard() {
                 sx={{
                   display: 'flex',
                   flexDirection: 'column',
-                  justifyContent: 'center',
-                  gap: 0.25,
+                  justifyContent: 'space-between',
                   flex: '1 1 420px',
                   minWidth: 0,
                 }}
