@@ -1,4 +1,4 @@
-import { Box, Card, Stack, Tooltip, Typography } from '@mui/material'
+import { Box, Card, Stack, Typography } from '@mui/material'
 import CloudOutlinedIcon from '@mui/icons-material/CloudOutlined'
 import DnsOutlinedIcon from '@mui/icons-material/DnsOutlined'
 import HubOutlinedIcon from '@mui/icons-material/HubOutlined'
@@ -7,6 +7,7 @@ import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined'
 import ViewInArIcon from '@mui/icons-material/ViewInAr'
 import type { ReactElement, ReactNode } from 'react'
 import { colors } from '../colors.ts'
+import AppTooltip from './AppTooltip.tsx'
 import type { Cluster, ClusterNode, Workload } from '../types/infrastructure.ts'
 import StatusChip from './StatusChip.tsx'
 
@@ -241,7 +242,7 @@ function WorkloadGroup({ name, pods }: { name: string; pods: Workload[] }) {
               WORKLOAD
             </Typography>
           </Hint>
-          <Tooltip
+          <AppTooltip
             title={tone.hint}
             describeChild
             arrow
@@ -255,7 +256,7 @@ function WorkloadGroup({ name, pods }: { name: string; pods: Workload[] }) {
             <Typography noWrap sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1.3, color: tone.color, cursor: 'help', width: 'fit-content' }}>
               {name}
             </Typography>
-          </Tooltip>
+          </AppTooltip>
         </Box>
       </Stack>
       <Stack spacing={0} sx={{ alignItems: 'center' }}>
@@ -444,7 +445,7 @@ function DiagramBox({
 
 function Hint({ label, children }: { label: keyof typeof hints; children: ReactElement }) {
   return (
-    <Tooltip
+    <AppTooltip
       title={hints[label]}
       arrow
       placement="top"
@@ -455,7 +456,7 @@ function Hint({ label, children }: { label: keyof typeof hints; children: ReactE
       }}
     >
       {children}
-    </Tooltip>
+    </AppTooltip>
   )
 }
 

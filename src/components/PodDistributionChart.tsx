@@ -68,12 +68,14 @@ export default function PodDistributionChart({ workloads, nodes }: PodDistributi
               ))}
             </Pie>
             <Tooltip
+              allowEscapeViewBox={{ x: false, y: false }}
               formatter={(value, name) => [`${value ?? 0} pods`, name]}
               contentStyle={{
                 borderRadius: 8,
                 border: `1px solid ${colors.line}`,
                 boxShadow: '0 8px 24px rgba(16, 24, 40, 0.08)',
                 fontSize: 13,
+                maxWidth: 'min(220px, calc(100vw - 32px))',
               }}
             />
           </PieChart>

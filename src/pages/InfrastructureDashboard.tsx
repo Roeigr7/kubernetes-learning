@@ -5,6 +5,7 @@ import DnsOutlinedIcon from '@mui/icons-material/DnsOutlined'
 import SpeedOutlinedIcon from '@mui/icons-material/SpeedOutlined'
 import ViewInArIcon from '@mui/icons-material/ViewInAr'
 import { getInfrastructure } from '../api/getInfrastructure.ts'
+import RightsizingIntro from '../components/RightsizingIntro.tsx'
 import WorkloadResourcesCard from '../components/WorkloadResourcesCard.tsx'
 import WorkloadUsageChart from '../components/WorkloadUsageChart.tsx'
 import DashboardHeader from '../components/DashboardHeader.tsx'
@@ -64,6 +65,7 @@ export default function InfrastructureDashboard() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', overflowX: 'clip' }}>
+      <RightsizingIntro />
       <DashboardHeader
         company={data.company}
         user={data.user}
@@ -166,7 +168,10 @@ export default function InfrastructureDashboard() {
 
           <Stack spacing={1.5}>
             <Box>
-              <Typography sx={{ fontSize: 15, fontWeight: 600 }}>CPU and memory per workload</Typography>
+              <Typography sx={{ fontSize: { xs: 24, sm: 28 }, fontWeight: 700, letterSpacing: -0.4, lineHeight: 1.2 }}>
+                Workload Rightsizing
+              </Typography>
+              <Typography sx={{ fontSize: 15, fontWeight: 600, mt: 1 }}>CPU and memory per workload</Typography>
               <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
                 Actual use across the day. Straight lines are request and limit.
               </Typography>
@@ -179,8 +184,12 @@ export default function InfrastructureDashboard() {
                 gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 9fr) minmax(280px, 3fr)' },
               }}
             >
-              <WorkloadUsageChart history={data.workloadDay} resources={resources} />
-              <WorkloadResourcesCard resources={resources} onAdjust={adjustResource} onReset={() => setResources(copyResources(data.workloadResources))} />
+              <Box sx={{ minWidth: 0, height: '100%', order: { xs: 2, lg: 1 } }}>
+                <WorkloadUsageChart history={data.workloadDay} resources={resources} />
+              </Box>
+              <Box sx={{ minWidth: 0, height: '100%', order: { xs: 1, lg: 2 } }}>
+                <WorkloadResourcesCard resources={resources} onAdjust={adjustResource} onReset={() => setResources(copyResources(data.workloadResources))} />
+              </Box>
             </Box>
           </Stack>
 

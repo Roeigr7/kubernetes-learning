@@ -14,13 +14,13 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Tooltip,
   Typography,
 } from '@mui/material'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import SearchIcon from '@mui/icons-material/Search'
 import { colors } from '../colors.ts'
+import AppTooltip from './AppTooltip.tsx'
 import type { Workload, WorkloadResources } from '../types/infrastructure.ts'
 import StatusChip from './StatusChip.tsx'
 import UsageMeter from './UsageMeter.tsx'
@@ -147,38 +147,62 @@ export default function WorkloadsTable({ workloads, resources }: WorkloadsTableP
     const el = scrollRef.current
     if (!el) return
 
-    const onWheel = (event: WheelEvent) => {
-      const horizontal = Math.abs(event.deltaX) > Math.abs(event.deltaY)
-      if (horizontal) {
-        const maxLeft = el.scrollWidth - el.clientWidth
-        const canScrollX =
-          (event.deltaX > 0 && el.scrollLeft < maxLeft - 1) || (event.deltaX < 0 && el.scrollLeft > 0)
-        if (!canScrollX) return
-        event.preventDefault()
-        el.scrollLeft += event.deltaX
-        return
-      }
-
-      const { loadedCount: loaded, total } = stateRef.current
-      const hasMoreRows = loaded < total
-      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 2
-      const atTop = el.scrollTop <= 0
-
-      if (event.deltaY > 0 && (!atBottom || hasMoreRows)) {
-        event.preventDefault()
-        if (atBottom && hasMoreRows) loadMoreRef.current()
-        else el.scrollTop += event.deltaY
-        return
-      }
-
-      if (event.deltaY < 0 && !atTop) {
-        event.preventDefault()
-        el.scrollTop += event.deltaY
-      }
+    const atEdge = (deltaY: number) => {
+      if (el.scrollHeight <= el.clientHeight + 1 || getComputedStyle(el).overflowY === 'hidden') return true
+      if (deltaY > 0) return el.scrollTop + el.clientHeight >= el.scrollHeight - 1
+      return el.scrollTop <= 0
     }
 
+    const scrollPage = (deltaY: number) => {
+      const scroller = document.scrollingElement
+      if (!scroller || deltaY === 0) return false
+      const max = scroller.scrollHeight - scroller.clientHeight
+      const next = Math.min(max, Math.max(0, scroller.scrollTop + deltaY))
+      if (next === scroller.scrollTop) return false
+      scroller.scrollTop = next
+      return true
+    }
+
+    const onScroll = () => {
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 8) loadMoreRef.current()
+    }
+
+    const onWheel = (event: WheelEvent) => {
+      if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return
+      if (event.deltaY > 0 && el.scrollTop + el.clientHeight >= el.scrollHeight - 8) loadMoreRef.current()
+      if (!atEdge(event.deltaY)) return
+      if (scrollPage(event.deltaY)) event.preventDefault()
+    }
+
+    let touchY = 0
+    let touchX = 0
+    const onTouchStart = (event: TouchEvent) => {
+      touchY = event.touches[0]?.clientY ?? 0
+      touchX = event.touches[0]?.clientX ?? 0
+    }
+    const onTouchMove = (event: TouchEvent) => {
+      const point = event.touches[0]
+      if (!point) return
+      const deltaY = touchY - point.clientY
+      const deltaX = touchX - point.clientX
+      touchY = point.clientY
+      touchX = point.clientX
+      if (Math.abs(deltaX) > Math.abs(deltaY)) return
+      if (deltaY > 0 && el.scrollTop + el.clientHeight >= el.scrollHeight - 8) loadMoreRef.current()
+      if (!atEdge(deltaY)) return
+      if (scrollPage(deltaY)) event.preventDefault()
+    }
+
+    el.addEventListener('scroll', onScroll, { passive: true })
     el.addEventListener('wheel', onWheel, { passive: false })
-    return () => el.removeEventListener('wheel', onWheel)
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    return () => {
+      el.removeEventListener('scroll', onScroll)
+      el.removeEventListener('wheel', onWheel)
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+    }
   }, [])
 
   function toggleSort(key: SortKey) {
@@ -255,8 +279,9 @@ export default function WorkloadsTable({ workloads, resources }: WorkloadsTableP
               ? headHeight + rowHeight * Math.min(PAGE_SIZE, shownWorkloads.length)
               : undefined,
           overflowX: 'auto',
-          overflowY: 'auto',
-          overscrollBehavior: 'contain',
+          overflowY: visibleWorkloads.length > PAGE_SIZE ? 'auto' : 'hidden',
+          overscrollBehavior: 'auto',
+          touchAction: 'pan-x pan-y',
         }}
       >
         <Table
@@ -276,7 +301,7 @@ export default function WorkloadsTable({ workloads, resources }: WorkloadsTableP
                 const SortIcon = sort?.direction === 'asc' ? ArrowUpwardIcon : ArrowDownwardIcon
                 return (
                   <TableCell key={column.key} sortDirection={active ? sort.direction : false}>
-                    <Tooltip title={column.hint} describeChild arrow placement="top" slotProps={tooltipSlotProps}>
+                    <AppTooltip title={column.hint} describeChild arrow placement="top" slotProps={tooltipSlotProps}>
                       <Box
                         component="button"
                         type="button"
@@ -295,7 +320,7 @@ export default function WorkloadsTable({ workloads, resources }: WorkloadsTableP
                         {column.label}
                         {active ? <SortIcon sx={{ fontSize: 14 }} /> : null}
                       </Box>
-                    </Tooltip>
+                    </AppTooltip>
                   </TableCell>
                 )
               })}
@@ -328,11 +353,11 @@ export default function WorkloadsTable({ workloads, resources }: WorkloadsTableP
                       </Avatar>
                       <Box sx={{ minWidth: 0 }}>
                         <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{workload.name}</Typography>
-                        <Tooltip title="A running image inside the pod. The image is the software package, and the container is that package running." describeChild arrow placement="top" slotProps={tooltipSlotProps}>
+                        <AppTooltip title="A running image inside the pod. The image is the software package, and the container is that package running." describeChild arrow placement="top" slotProps={tooltipSlotProps}>
                           <Typography variant="caption" sx={{ color: 'text.secondary', cursor: 'help', width: 'fit-content' }}>
                             {workload.containers.map((container) => `container/${container}`).join(' · ')}
                           </Typography>
-                        </Tooltip>
+                        </AppTooltip>
                       </Box>
                     </Stack>
                   </TableCell>
@@ -360,18 +385,18 @@ export default function WorkloadsTable({ workloads, resources }: WorkloadsTableP
                     </Typography>
                   </TableCell>
                   <TableCell sx={{ width: 108 }}>
-                    <Tooltip title={usageHint('cores', workload.cpuUsed, workload.cpuRequest)} describeChild arrow placement="top" slotProps={tooltipSlotProps}>
+                    <AppTooltip title={usageHint('cores', workload.cpuUsed, workload.cpuRequest)} describeChild arrow placement="top" slotProps={tooltipSlotProps}>
                       <Box sx={{ cursor: 'help' }}>
                         <UsageMeter value={workload.cpu} />
                       </Box>
-                    </Tooltip>
+                    </AppTooltip>
                   </TableCell>
                   <TableCell sx={{ width: 108 }}>
-                    <Tooltip title={usageHint('Gi', workload.memoryUsed, workload.memoryRequest)} describeChild arrow placement="top" slotProps={tooltipSlotProps}>
+                    <AppTooltip title={usageHint('Gi', workload.memoryUsed, workload.memoryRequest)} describeChild arrow placement="top" slotProps={tooltipSlotProps}>
                       <Box sx={{ cursor: 'help' }}>
                         <UsageMeter value={workload.memory} />
                       </Box>
-                    </Tooltip>
+                    </AppTooltip>
                   </TableCell>
                   <TableCell>
                     <StatusChip status={workload.status} />

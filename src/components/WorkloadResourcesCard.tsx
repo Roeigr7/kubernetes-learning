@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { Box, Button, Card, LinearProgress, Stack, Tooltip, Typography } from '@mui/material'
+import { Box, Button, Card, LinearProgress, Stack, Typography } from '@mui/material'
 import { colors } from '../colors.ts'
+import AppTooltip from './AppTooltip.tsx'
+import { rightsizingBody, rightsizingExample, rightsizingGoal, rightsizingTitle } from './RightsizingIntro.tsx'
 import type { WorkloadAmount, WorkloadResources } from '../types/infrastructure.ts'
 
 type WorkloadResourcesCardProps = {
@@ -28,12 +30,37 @@ export default function WorkloadResourcesCard({ resources, onAdjust, onReset }: 
   return (
     <Card id="workload-resources" sx={{ height: '100%' }}>
       <Stack direction="row" spacing={1} sx={{ px: 2, pt: 2, pb: 1, alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <Box>
-          <Typography sx={{ fontSize: 15, fontWeight: 600 }}>Requests and limits</Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
-            CPU in cores. Memory in Gi.
-          </Typography>
-        </Box>
+        <AppTooltip
+          describeChild
+          arrow
+          placement="top"
+          title={
+            <Box sx={{ direction: 'rtl', textAlign: 'right' }}>
+              <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 0.75 }}>{rightsizingTitle}</Typography>
+              <Typography sx={{ fontSize: 13, lineHeight: 1.55 }}>{rightsizingBody}</Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1.55, mt: 0.75 }}>{rightsizingGoal}</Typography>
+              <Typography sx={{ fontSize: 13, lineHeight: 1.55, mt: 0.75 }}>{rightsizingExample}</Typography>
+            </Box>
+          }
+          slotProps={{
+            tooltip: {
+              sx: {
+                direction: 'rtl',
+                textAlign: 'right',
+                maxWidth: 'min(340px, calc(100vw - 16px))',
+                px: 1.5,
+                py: 1.25,
+              },
+            },
+          }}
+        >
+          <Box sx={{ cursor: 'help', width: 'fit-content' }}>
+            <Typography sx={{ fontSize: 15, fontWeight: 600 }}>Requests and limits</Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
+              CPU in cores. Memory in Gi.
+            </Typography>
+          </Box>
+        </AppTooltip>
         <Button size="small" variant="outlined" onClick={onReset} sx={{ flexShrink: 0 }}>
           Reset
         </Button>
@@ -95,7 +122,7 @@ function ResourceLine({
       </Stack>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', mt: 0.5 }}>
         {fields.map((field) => (
-          <Tooltip key={field.key} title={field.hint} describeChild arrow placement="top" slotProps={tooltipSlotProps}>
+          <AppTooltip key={field.key} title={field.hint} describeChild arrow placement="top" slotProps={tooltipSlotProps}>
             <Box sx={{ textAlign: 'center', cursor: 'help' }}>
               <Typography sx={{ fontSize: 16, fontWeight: 700, fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>
                 <CountValue value={amount[field.key]} />
@@ -104,7 +131,7 @@ function ResourceLine({
                 {field.label}
               </Typography>
             </Box>
-          </Tooltip>
+          </AppTooltip>
         ))}
       </Box>
       <LinearProgress

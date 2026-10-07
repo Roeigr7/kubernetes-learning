@@ -83,6 +83,7 @@ function MetricChart({
             <XAxis dataKey="time" tick={{ fill: colors.tick, fontSize: 12 }} axisLine={false} tickLine={false} dy={6} interval={1} />
             <YAxis domain={[0, top]} ticks={ticksFor(top)} tick={{ fill: colors.tick, fontSize: 12 }} axisLine={false} tickLine={false} width={32} />
             <Tooltip
+              allowEscapeViewBox={{ x: false, y: false }}
               content={(props) => (
                 <DayTooltip
                   active={props.active}
@@ -139,7 +140,7 @@ function DayTooltip({ active, payload, label, averages, resources }: DayTooltipP
   if (!active || !payload?.length) return null
 
   return (
-    <Box sx={{ bgcolor: '#fff', border: `1px solid ${colors.line}`, borderRadius: 1, boxShadow: '0 8px 24px rgba(16, 24, 40, 0.08)', px: 1.25, py: 1, minWidth: 180 }}>
+    <Box sx={{ bgcolor: '#fff', border: `1px solid ${colors.line}`, borderRadius: 1, boxShadow: '0 8px 24px rgba(16, 24, 40, 0.08)', px: 1.25, py: 1, minWidth: 0, maxWidth: 'min(240px, calc(100vw - 32px))' }}>
       <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 0.75 }}>{label}</Typography>
       <Stack spacing={0.75}>
         {payload.map((item) => {

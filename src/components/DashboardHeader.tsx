@@ -12,12 +12,12 @@ import {
   MenuItem,
   Select,
   Stack,
-  Tooltip,
   Typography,
 } from '@mui/material'
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined'
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone'
 import { colors } from '../colors.ts'
+import AppTooltip from './AppTooltip.tsx'
 import type { Company, DashboardUser, NotificationItem } from '../types/infrastructure.ts'
 import { titleCase } from '../utils/format.ts'
 
@@ -151,15 +151,15 @@ export default function DashboardHeader({
 
           <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', sm: 'block' }, my: 0.5 }} />
 
-          <Tooltip title="Notifications">
+          <AppTooltip title="Notifications">
             <IconButton aria-label="Notifications" onClick={(event) => setMenuAnchor(event.currentTarget)}>
               <Badge badgeContent={notifications.length} color="primary">
                 <NotificationsNoneIcon />
               </Badge>
             </IconButton>
-          </Tooltip>
+          </AppTooltip>
 
-          <Tooltip title={`${user.name} · ${user.role}`}>
+          <AppTooltip title={`${user.name} · ${user.role}`}>
             <Avatar
               sx={{
                 width: 36,
@@ -172,7 +172,7 @@ export default function DashboardHeader({
             >
               {user.initials}
             </Avatar>
-          </Tooltip>
+          </AppTooltip>
         </Stack>
       </Stack>
 

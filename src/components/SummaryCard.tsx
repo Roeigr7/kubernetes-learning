@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
-import { Avatar, Box, Card, CardContent, Stack, Tooltip, Typography } from '@mui/material'
+import { Avatar, Box, Card, CardContent, Stack, Typography } from '@mui/material'
 import { colors } from '../colors.ts'
+import AppTooltip from './AppTooltip.tsx'
 import TrendingDownIcon from '@mui/icons-material/TrendingDown'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 
@@ -82,7 +83,7 @@ export default function SummaryCard({
   if (!hint) return card
 
   return (
-    <Tooltip
+    <AppTooltip
       title={hint}
       arrow
       placement="top"
@@ -93,7 +94,7 @@ export default function SummaryCard({
       }}
     >
       {card}
-    </Tooltip>
+    </AppTooltip>
   )
 }
 

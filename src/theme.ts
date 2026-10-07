@@ -1,6 +1,29 @@
 import { createTheme } from '@mui/material/styles'
 import { colors } from './colors.ts'
 
+const tooltipModifiers = [
+  {
+    name: 'preventOverflow',
+    options: { boundary: 'viewport', padding: 8, altAxis: true, tether: false },
+  },
+  {
+    name: 'flip',
+    options: {
+      boundary: 'viewport',
+      padding: 8,
+      fallbackPlacements: ['bottom', 'top', 'right', 'left'],
+    },
+  },
+]
+
+export const tooltipPopperSlotProps = {
+  popper: {
+    popperOptions: {
+      modifiers: tooltipModifiers,
+    },
+  },
+}
+
 export const theme = createTheme({
   palette: {
     mode: 'light',
@@ -87,6 +110,25 @@ export const theme = createTheme({
         root: {
           borderRadius: 8,
           backgroundColor: '#FFFFFF',
+        },
+      },
+    },
+    MuiTooltip: {
+      defaultProps: {
+        enterTouchDelay: 0,
+        leaveTouchDelay: 2500,
+        disableInteractive: true,
+        slotProps: {
+          popper: {
+            popperOptions: {
+              modifiers: tooltipModifiers,
+            },
+          },
+        },
+      },
+      styleOverrides: {
+        tooltip: {
+          maxWidth: 'min(280px, calc(100vw - 16px))',
         },
       },
     },
