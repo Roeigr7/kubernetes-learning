@@ -39,7 +39,7 @@ export default function WorkloadResourcesCard({ resources, onAdjust, onReset }: 
             <Box sx={{ direction: 'rtl', textAlign: 'right' }}>
               <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 0.75 }}>{rightsizingTitle}</Typography>
               <Typography sx={{ fontSize: 13, lineHeight: 1.55 }}>{rightsizingBody}</Typography>
-              <Typography sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1.55, mt: 0.75 }}>{rightsizingGoal}</Typography>
+              <Typography sx={{ fontSize: 13, lineHeight: 1.55, mt: 0.75 }}>{rightsizingGoal}</Typography>
               <Typography sx={{ fontSize: 13, lineHeight: 1.55, mt: 0.75 }}>{rightsizingExample}</Typography>
             </Box>
           }
@@ -79,19 +79,19 @@ export default function WorkloadResourcesCard({ resources, onAdjust, onReset }: 
               </Typography>
             </Stack>
             <ResourceLine
-              kind="CPU"
               resources={resources}
               name={resource.name}
               metric="cpu"
+              kind="CPU"
               amount={resource.cpu}
               color={resource.name.startsWith('feed') ? colors.feedCpu : colors.userCpu}
               onAdjust={(field, direction) => onAdjust(resource.name, 'cpu', field, direction)}
             />
             <ResourceLine
-              kind="Memory"
               resources={resources}
               name={resource.name}
               metric="memory"
+              kind="Memory"
               amount={resource.memory}
               color={resource.name.startsWith('feed') ? colors.feedMemory : colors.userMemory}
               onAdjust={(field, direction) => onAdjust(resource.name, 'memory', field, direction)}
@@ -104,18 +104,18 @@ export default function WorkloadResourcesCard({ resources, onAdjust, onReset }: 
 }
 
 function ResourceLine({
-  kind,
   resources,
   name,
   metric,
+  kind,
   amount,
   color,
   onAdjust,
 }: {
-  kind: string
   resources: WorkloadResources[]
   name: string
   metric: 'cpu' | 'memory'
+  kind: string
   amount: WorkloadAmount
   color: string
   onAdjust: (field: 'request' | 'limit', direction: 'raise' | 'lower') => void

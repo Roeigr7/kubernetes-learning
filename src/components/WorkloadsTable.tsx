@@ -211,26 +211,24 @@ export default function WorkloadsTable({ workloads, resources }: WorkloadsTableP
         sx={{ px: 2.5, pt: 2, pb: 1.5 }}
       >
         <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          spacing={1}
-          sx={{ justifyContent: 'space-between', alignItems: { sm: 'flex-start' } }}
+          direction="row"
+          useFlexGap
+          spacing={1.5}
+          sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}
         >
-          <Box>
+          <Box sx={{ minWidth: 0 }}>
             <Typography sx={{ fontSize: 15, fontWeight: 600 }}>Kubernetes Workloads</Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
               One row is one pod. Showing {shownWorkloads.length} of {visibleWorkloads.length}.
             </Typography>
           </Box>
-        </Stack>
-
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.25}>
           <TextField
             select
             size="small"
             label="Namespace"
             value={namespace}
             onChange={(event) => setNamespace(event.target.value)}
-            sx={{ minWidth: 0, width: { xs: '100%', md: 180 } }}
+            sx={{ flexShrink: 0, width: { xs: 148, sm: 180 }, ml: 'auto' }}
           >
             <MenuItem value="all">All namespaces</MenuItem>
             {namespaces.map((item) => (

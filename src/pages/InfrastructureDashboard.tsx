@@ -147,14 +147,45 @@ export default function InfrastructureDashboard() {
           </Box>
 
           <Stack spacing={1.5}>
-            <Box>
-              <Typography sx={{ fontSize: { xs: 24, sm: 28 }, fontWeight: 700, letterSpacing: -0.4, lineHeight: 1.2 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                columnGap: 2.5,
+                rowGap: 1,
+                flexWrap: 'wrap',
+                minWidth: 0,
+                minHeight: { xs: 48, sm: 52 },
+              }}
+            >
+              <Typography
+                sx={{
+                  flex: '0 0 auto',
+                  fontSize: { xs: 24, sm: 28 },
+                  fontWeight: 700,
+                  letterSpacing: -0.4,
+                  lineHeight: 1.15,
+                }}
+              >
                 Workload Rightsizing
               </Typography>
-              <Typography sx={{ fontSize: 15, fontWeight: 600, mt: 1 }}>CPU and memory per workload</Typography>
-              <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
-                Actual use across the day. Straight lines are request and limit.
-              </Typography>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  gap: 0.25,
+                  flex: '1 1 420px',
+                  minWidth: 0,
+                }}
+              >
+                <Typography sx={{ fontSize: { xs: 13, sm: 15 }, fontWeight: 600, lineHeight: 1.15 }}>
+                  CPU and memory per workload
+                </Typography>
+                <Typography sx={{ color: 'text.secondary', fontSize: { xs: 12, sm: 14 }, lineHeight: 1.15 }}>
+                  Actual use across the day. Straight lines are request and limit.
+                </Typography>
+              </Box>
             </Box>
             <Box
               sx={{
