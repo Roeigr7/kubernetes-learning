@@ -4,6 +4,8 @@ import DnsOutlinedIcon from '@mui/icons-material/DnsOutlined'
 import HubOutlinedIcon from '@mui/icons-material/HubOutlined'
 import AppsOutlinedIcon from '@mui/icons-material/AppsOutlined'
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined'
+import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined'
+import StorageOutlinedIcon from '@mui/icons-material/StorageOutlined'
 import ViewInArIcon from '@mui/icons-material/ViewInAr'
 import type { ReactElement, ReactNode } from 'react'
 import { colors } from '../colors.ts'
@@ -48,7 +50,12 @@ const hints = {
   'workload feed': workloadTones.feed.hint,
   Pod: 'היחידה הקטנה ש-Kubernetes מריץ. היא יושבת על שרת, ובתוכה רצים קונטיינר אחד או יותר ביחד.',
   Container: 'הרצה של image בתוך ה-pod. ה-image הוא החבילה של התוכנה, והקונטיינר הוא ההרצה שלה.',
+  Image: 'החבילה של התוכנה. הקונטיינר הוא ההרצה של ה-image.',
+  Registry: 'המחסן שבו נשמרים ה-images. Kubernetes מושך משם את ה-image.',
 } as const
+
+const imageColor = '#0F766E'
+const registryColor = '#475569'
 
 const layers = [
   { label: 'Cloud' as const, color: colors.navy },
@@ -58,6 +65,8 @@ const layers = [
   { label: 'workload feed' as const, color: workloadTones.feed.color },
   { label: 'Pod' as const, color: colors.ink },
   { label: 'Container' as const, color: colors.pink },
+  { label: 'Image' as const, color: imageColor },
+  { label: 'Registry' as const, color: registryColor },
 ]
 
 export default function InfrastructureTopology({
@@ -71,7 +80,7 @@ export default function InfrastructureTopology({
       <Box sx={{ px: 2.5, pt: 2, pb: 1.5 }}>
         <Typography sx={{ fontSize: 15, fontWeight: 600 }}>Infrastructure Topology</Typography>
         <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
-          From the cloud down to each container.
+          From the cloud down to each image in the registry.
         </Typography>
         <Stack direction="row" spacing={1.5} useFlexGap sx={{ flexWrap: 'wrap', mt: 1.5 }}>
           {layers.map((layer) => (
@@ -348,30 +357,57 @@ function ContainerBranch({ names }: { names: string[] }) {
 
 function ContainerNode({ name, compact }: { name: string; compact?: boolean }) {
   return (
-    <Hint label="Container">
-    <Box
-      sx={{
-        mx: 'auto',
-        width: compact ? '100%' : '86%',
-        border: '1px dashed',
-        borderColor: colors.pink,
-        borderRadius: 1.5,
-        bgcolor: '#fff',
-        px: compact ? 0.5 : 1,
-        py: 0.6,
-        cursor: 'help',
-      }}
-    >
-      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', justifyContent: 'center' }}>
-        <Inventory2OutlinedIcon sx={{ fontSize: 14, color: colors.pink }} />
-        {compact ? null : (
-          <Typography variant="caption" sx={{ color: colors.pink, fontWeight: 700, letterSpacing: 0.4 }}>
-            CONTAINER
-          </Typography>
-        )}
-        <Typography sx={{ fontSize: 13, fontWeight: 700 }}>{name}</Typography>
-      </Stack>
+    <Box sx={{ width: compact ? '100%' : '86%', mx: 'auto' }}>
+      <ChainNode label="Container" kicker="CONTAINER" name={name} color={colors.pink} dashed compact={compact} icon={<Inventory2OutlinedIcon sx={{ fontSize: 14, color: colors.pink }} />} />
+      <Stem height={8} />
+      <ChainNode label="Image" kicker="IMAGE" name={name} color={imageColor} compact={compact} icon={<LayersOutlinedIcon sx={{ fontSize: 14, color: imageColor }} />} />
+      <Stem height={8} />
+      <ChainNode label="Registry" kicker="REGISTRY" name="ECR" color={registryColor} compact={compact} icon={<StorageOutlinedIcon sx={{ fontSize: 14, color: registryColor }} />} />
     </Box>
+  )
+}
+
+function ChainNode({
+  label,
+  kicker,
+  name,
+  color,
+  icon,
+  compact,
+  dashed,
+}: {
+  label: 'Container' | 'Image' | 'Registry'
+  kicker: string
+  name: string
+  color: string
+  icon: ReactNode
+  compact?: boolean
+  dashed?: boolean
+}) {
+  return (
+    <Hint label={label}>
+      <Box
+        sx={{
+          border: '1px dashed',
+          borderStyle: dashed ? 'dashed' : 'solid',
+          borderColor: color,
+          borderRadius: 1.5,
+          bgcolor: '#fff',
+          px: compact ? 0.5 : 1,
+          py: 0.55,
+          cursor: 'help',
+        }}
+      >
+        <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', justifyContent: 'center' }}>
+          {icon}
+          <Typography variant="caption" sx={{ color, fontWeight: 700, letterSpacing: 0.3, fontSize: compact ? 9 : 11 }}>
+            {kicker}
+          </Typography>
+          <Typography noWrap sx={{ fontSize: compact ? 12 : 13, fontWeight: 700 }}>
+            {name}
+          </Typography>
+        </Stack>
+      </Box>
     </Hint>
   )
 }
