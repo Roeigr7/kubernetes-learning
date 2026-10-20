@@ -14,7 +14,7 @@ export default function UsageMeter({ value, label }: UsageMeterProps) {
     <Stack spacing={0.5} sx={{ minWidth: 0, flex: 1 }}>
       <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
         {label ? (
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          <Typography variant="caption" noWrap sx={{ color: 'text.secondary', minWidth: 0 }}>
             {label}
           </Typography>
         ) : (

@@ -45,6 +45,9 @@ export interface ClusterNode {
   status: NodeStatus
   cpuUsage: number
   memoryUsage: number
+  cpuCores?: number
+  memoryGi?: number
+  containerRuntime?: string
   pods: number
   region: string
 }
@@ -80,6 +83,28 @@ export interface WorkloadHour {
   userMemory: number
   feedCpu: number
   feedMemory: number
+  [key: string]: string | number
+}
+
+export interface UsageSeries {
+  key: string
+  name: string
+  color: string
+  workload: string
+  metric: 'cpu' | 'memory'
+}
+
+export type UsagePeriod = 'day' | 'week'
+
+export interface ControlPlaneComponent {
+  id: string
+  name: string
+  detail: string
+}
+
+export interface ControlPlane {
+  name: string
+  components: ControlPlaneComponent[]
 }
 
 export interface CpuSample {
@@ -101,6 +126,9 @@ export interface InfrastructureData {
   workloads: Workload[]
   workloadResources: WorkloadResources[]
   workloadDay: WorkloadHour[]
+  usageSeries?: UsageSeries[]
+  usagePeriod?: UsagePeriod
+  controlPlane?: ControlPlane
   cpuHistory: CpuSample[]
   podDistribution: PodDistributionItem[]
 }

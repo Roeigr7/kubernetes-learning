@@ -1,23 +1,27 @@
 import { Box, Card, Stack, Typography } from '@mui/material'
+import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined'
+import AppsOutlinedIcon from '@mui/icons-material/AppsOutlined'
 import CloudOutlinedIcon from '@mui/icons-material/CloudOutlined'
 import DnsOutlinedIcon from '@mui/icons-material/DnsOutlined'
 import HubOutlinedIcon from '@mui/icons-material/HubOutlined'
-import AppsOutlinedIcon from '@mui/icons-material/AppsOutlined'
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined'
 import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined'
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined'
 import StorageOutlinedIcon from '@mui/icons-material/StorageOutlined'
 import ViewInArIcon from '@mui/icons-material/ViewInAr'
 import type { ReactElement, ReactNode } from 'react'
 import { colors } from '../colors.ts'
 import AppTooltip from './AppTooltip.tsx'
-import type { Cluster, ClusterNode, Workload } from '../types/infrastructure.ts'
+import type { Cluster, ClusterNode, ControlPlane, Workload } from '../types/infrastructure.ts'
 import StatusChip from './StatusChip.tsx'
+import UsageMeter from './UsageMeter.tsx'
 
 type InfrastructureTopologyProps = {
   cluster: Cluster
   region: string
   nodes: ClusterNode[]
   workloads: Workload[]
+  controlPlane?: ControlPlane
 }
 
 const connector = '#93C5FD'
@@ -35,10 +39,32 @@ const workloadTones = {
     bg: '#F5F3FF',
     hint: 'אפליקציית הפיד. רצה ב-namespace stage, על node-1 ו-node-2.',
   },
+  checkout: {
+    color: colors.checkoutCpu,
+    border: '#DDD6FE',
+    bg: '#F5F3FF',
+    hint: 'אפליקציית התשלום. רצה ב-namespace production, על node-1 ו-node-3.',
+  },
+  search: {
+    color: colors.searchCpu,
+    border: '#A5F3FC',
+    bg: '#ECFEFF',
+    hint: 'אפליקציית החיפוש. רצה ב-namespace production, על node-2 ו-node-4.',
+  },
+  billing: {
+    color: colors.billingCpu,
+    border: '#FED7AA',
+    bg: '#FFF7ED',
+    hint: 'אפליקציית החיוב. רצה ב-namespace production, על node-5.',
+  },
 } as const
 
 function toneFor(name: string) {
-  return name.startsWith('feed') ? workloadTones.feed : workloadTones.user
+  if (name.startsWith('feed')) return workloadTones.feed
+  if (name.startsWith('checkout')) return workloadTones.checkout
+  if (name.startsWith('search')) return workloadTones.search
+  if (name.startsWith('billing')) return workloadTones.billing
+  return workloadTones.user
 }
 
 const hints = {
@@ -52,29 +78,61 @@ const hints = {
   Container: 'הרצה של image בתוך ה-pod. ה-image הוא החבילה של התוכנה, והקונטיינר הוא ההרצה שלה.',
   Image: 'החבילה של התוכנה. הקונטיינר הוא ההרצה של ה-image.',
   Registry: 'המחסן שבו נשמרים ה-images. Kubernetes מושך משם את ה-image.',
+  'Controller Plane': 'מישור הבקרה. הוא מנהל את הקלאסטר ומחליט מה צריך לרוץ.',
+  Scheduler: 'בוחר על איזה node כל pod חדש ירוץ.',
+  'API Server': 'הדלת של הקלאסטר. כל בקשה וכל דיווח עוברים דרכו.',
+  etcd: 'מסד הנתונים של הקלאסטר. שומר את המצב הרצוי ואת המצב בפועל.',
+  'Controller Manager': 'מריץ בקרים שבודקים שהמצב בפועל תואם למה שהוגדר.',
+  CPU: 'ליבות המעבד של השרת, וכמה מהן בשימוש עכשיו.',
+  RAM: 'הזיכרון של השרת, וכמה ממנו בשימוש עכשיו.',
+  Kubelet: 'הסוכן שרץ על השרת. הוא מפעיל את ה-pods ומדווח ל-API Server.',
+  'Kube Proxy': 'דואג לרשת על השרת, כדי שתעבורה לשירות תגיע ל-pods הנכונים.',
+  'Container Runtime': 'התוכנה שמריצה את הקונטיינרים על השרת. כאן זו containerd.',
 } as const
 
 const imageColor = '#0F766E'
 const registryColor = '#475569'
 
-const layers = [
-  { label: 'Cloud' as const, color: colors.navy },
-  { label: 'Cluster' as const, color: colors.green },
-  { label: 'Node' as const, color: colors.blue },
-  { label: 'workload user' as const, color: workloadTones.user.color },
-  { label: 'workload feed' as const, color: workloadTones.feed.color },
-  { label: 'Pod' as const, color: colors.ink },
-  { label: 'Container' as const, color: colors.pink },
-  { label: 'Image' as const, color: imageColor },
-  { label: 'Registry' as const, color: registryColor },
-]
+const componentIcons = {
+  Scheduler: AccountTreeOutlinedIcon,
+  'API Server': HubOutlinedIcon,
+  etcd: StorageOutlinedIcon,
+  'Controller Manager': SettingsOutlinedIcon,
+} as const
 
 export default function InfrastructureTopology({
   cluster,
   region,
   nodes,
   workloads,
+  controlPlane,
 }: InfrastructureTopologyProps) {
+  const showAgents = nodes.some((node) => node.cpuCores != null)
+  const workloadNames = Array.from(new Set(workloads.map((workload) => workload.name)))
+  const layers = [
+    { label: 'Cloud', color: colors.navy, title: hints.Cloud },
+    { label: 'Cluster', color: colors.green, title: hints.Cluster },
+    ...(controlPlane ? [{ label: 'Controller Plane', color: '#4338CA', title: hints['Controller Plane'] }] : []),
+    { label: 'Node', color: colors.blue, title: hints.Node },
+    ...workloadNames.map((name) => {
+      const short = name.replace(/ workload$/, '')
+      const tone = toneFor(name)
+      const pods = workloads.filter((workload) => workload.name === name)
+      return { label: `workload ${short}`, color: tone.color, title: hintFor(name, pods, tone.hint) }
+    }),
+    { label: 'Pod', color: colors.ink, title: hints.Pod },
+    { label: 'Container', color: colors.pink, title: hints.Container },
+    { label: 'Image', color: imageColor, title: hints.Image },
+    { label: 'Registry', color: registryColor, title: hints.Registry },
+    ...(showAgents
+      ? [
+          { label: 'Kubelet', color: colors.navy, title: hints.Kubelet },
+          { label: 'Kube Proxy', color: colors.blue, title: hints['Kube Proxy'] },
+          { label: 'Container Runtime', color: colors.pink, title: hints['Container Runtime'] },
+        ]
+      : []),
+  ]
+
   return (
     <Card id="infrastructure-topology">
       <Box sx={{ px: 2.5, pt: 2, pb: 1.5 }}>
@@ -84,7 +142,7 @@ export default function InfrastructureTopology({
         </Typography>
         <Stack direction="row" spacing={1.5} useFlexGap sx={{ flexWrap: 'wrap', mt: 1.5 }}>
           {layers.map((layer) => (
-            <Hint key={layer.label} label={layer.label}>
+            <Hint key={layer.label} title={layer.title}>
               <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', cursor: 'help' }}>
                 <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: layer.color }} />
                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
@@ -108,7 +166,7 @@ export default function InfrastructureTopology({
           bgcolor: '#FBFCFE',
           backgroundImage: `radial-gradient(${colors.line} 1.15px, transparent 1.15px)`,
           backgroundSize: '16px 16px',
-          overflow: 'hidden',
+          overflow: 'auto',
         }}
       >
         <Stack sx={{ alignItems: 'center' }}>
@@ -123,9 +181,15 @@ export default function InfrastructureTopology({
             status={cluster.status}
             wide
           />
+          {controlPlane ? (
+            <>
+              <Stem />
+              <ControlPlaneBranch plane={controlPlane} />
+            </>
+          ) : null}
         </Stack>
 
-        <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+        <Box sx={{ display: { xs: 'none', md: 'block' }, minWidth: nodes.length > 4 ? nodes.length * 230 : undefined }}>
           <Stem />
           <Box
             sx={{
@@ -209,6 +273,8 @@ function NodeBranch({ node, workloads }: { node: ClusterNode; workloads: Workloa
       </Stack>
       </Hint>
 
+      {node.cpuCores != null && node.memoryGi != null ? <NodeCapacity node={node} /> : null}
+
       <Stack spacing={1.25} sx={{ mt: 1.25 }}>
         {groupByWorkload(workloads).map((group) => (
           <WorkloadGroup key={group.name} name={group.name} pods={group.pods} />
@@ -216,6 +282,127 @@ function NodeBranch({ node, workloads }: { node: ClusterNode; workloads: Workloa
       </Stack>
     </Box>
   )
+}
+
+function NodeCapacity({ node }: { node: ClusterNode }) {
+  return (
+    <Stack spacing={0.75} sx={{ mt: 1.25 }}>
+      <Hint label="CPU">
+        <Box sx={{ cursor: 'help' }}>
+          <UsageMeter label={`CPU · ${node.cpuCores} cores`} value={node.cpuUsage} />
+        </Box>
+      </Hint>
+      <Hint label="RAM">
+        <Box sx={{ cursor: 'help' }}>
+          <UsageMeter label={`RAM · ${node.memoryGi} Gi`} value={node.memoryUsage} />
+        </Box>
+      </Hint>
+      <Stack direction="row" useFlexGap spacing={0.5} sx={{ flexWrap: 'wrap' }}>
+        <NodeAgent label="Kubelet" title={hints.Kubelet} />
+        <NodeAgent label="Kube Proxy" title={hints['Kube Proxy']} />
+        <NodeAgent label="Container Runtime" title={hints['Container Runtime']} />
+      </Stack>
+    </Stack>
+  )
+}
+
+function NodeAgent({ label, title }: { label: string; title: string }) {
+  return (
+    <Hint title={title}>
+      <Box
+        sx={{
+          border: '1px solid',
+          borderColor: '#BFDBFE',
+          borderRadius: 1,
+          bgcolor: '#F8FAFC',
+          px: 0.75,
+          py: 0.35,
+          cursor: 'help',
+        }}
+      >
+        <Typography sx={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.2, color: colors.ink, lineHeight: 1.2 }}>
+          {label}
+        </Typography>
+      </Box>
+    </Hint>
+  )
+}
+
+function ControlPlaneBranch({ plane }: { plane: ControlPlane }) {
+  return (
+    <Box
+      sx={{
+        width: 'min(100%, 920px)',
+        border: '1px solid',
+        borderColor: '#C7D2FE',
+        borderRadius: 2,
+        bgcolor: '#F8F9FF',
+        px: { xs: 1.25, md: 1.75 },
+        py: 1.5,
+      }}
+    >
+      <Hint label="Controller Plane">
+        <Box sx={{ width: 'fit-content', cursor: 'help' }}>
+          <Typography variant="caption" sx={{ color: '#4338CA', fontWeight: 700, letterSpacing: 0.4 }}>
+            CONTROLLER PLANE
+          </Typography>
+        </Box>
+      </Hint>
+        <Typography sx={{ fontSize: 13, color: 'text.secondary', lineHeight: 1.3 }}>
+          Scheduler, API Server, etcd, and Controller Manager.
+        </Typography>
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 1,
+            mt: 1.25,
+            gridTemplateColumns: { xs: 'minmax(0, 1fr) minmax(0, 1fr)', md: 'repeat(4, minmax(0, 1fr))' },
+          }}
+        >
+          {plane.components.map((component) => {
+            const Icon = componentIcons[component.name as keyof typeof componentIcons] ?? HubOutlinedIcon
+            const title = hints[component.name as keyof typeof hints] ?? component.detail
+            return (
+              <Hint key={component.id} title={title}>
+                <Box
+                  sx={{
+                    border: '1px solid',
+                    borderColor: '#C7D2FE',
+                    borderRadius: 1.5,
+                    bgcolor: '#fff',
+                    px: 1,
+                    py: 0.9,
+                    minWidth: 0,
+                    cursor: 'help',
+                  }}
+                >
+                  <Stack direction="row" spacing={0.75} sx={{ alignItems: 'flex-start' }}>
+                    <Icon sx={{ fontSize: 16, color: '#4338CA', mt: 0.2 }} />
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography sx={{ fontSize: 12, fontWeight: 700, lineHeight: 1.25 }}>{component.name}</Typography>
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }} noWrap>
+                        {component.detail}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+              </Hint>
+            )
+          })}
+        </Box>
+    </Box>
+  )
+}
+
+function hintFor(name: string, pods: Workload[], fallback: string) {
+  const namespaces = Array.from(new Set(pods.map((pod) => pod.namespace)))
+  if (name.startsWith('feed') && namespaces.includes('production') && !namespaces.includes('stage')) {
+    return 'אפליקציית הפיד. רצה ב-namespace production.'
+  }
+  if (name.startsWith('user') && pods.some((pod) => pod.node === 'node-4' || pod.node === 'node-5')) {
+    return 'אפליקציית המשתמשים. רצה ב-namespace production, על כמה שרתים.'
+  }
+  return fallback
 }
 
 function groupByWorkload(workloads: Workload[]) {
@@ -230,6 +417,7 @@ function groupByWorkload(workloads: Workload[]) {
 
 function WorkloadGroup({ name, pods }: { name: string; pods: Workload[] }) {
   const tone = toneFor(name)
+  const hint = hintFor(name, pods, tone.hint)
 
   return (
     <Box
@@ -252,7 +440,7 @@ function WorkloadGroup({ name, pods }: { name: string; pods: Workload[] }) {
             </Typography>
           </Hint>
           <AppTooltip
-            title={tone.hint}
+            title={hint}
             describeChild
             arrow
             placement="top"
@@ -479,10 +667,10 @@ function DiagramBox({
   )
 }
 
-function Hint({ label, children }: { label: keyof typeof hints; children: ReactElement }) {
+function Hint({ label, title, children }: { label?: keyof typeof hints; title?: string; children: ReactElement }) {
   return (
     <AppTooltip
-      title={hints[label]}
+      title={title ?? (label ? hints[label] : '')}
       arrow
       placement="top"
       slotProps={{

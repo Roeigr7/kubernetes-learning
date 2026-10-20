@@ -117,7 +117,7 @@ export default function DashboardHeader({
             ml: { md: 'auto' },
           }}
         >
-          <FormControl size="small" sx={{ minWidth: 0, flex: { xs: '1 1 120px', sm: '0 0 156px' }, maxWidth: '100%' }}>
+          <FormControl size="small" sx={{ minWidth: 0, flex: { xs: '1 1 150px', sm: '0 0 188px' }, maxWidth: '100%' }}>
             <InputLabel id="environment-label">Environment</InputLabel>
             <Select
               labelId="environment-label"

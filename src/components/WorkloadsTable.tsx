@@ -17,7 +17,7 @@ import {
 } from '@mui/material'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
-import { colors } from '../colors.ts'
+import { workloadTone } from '../colors.ts'
 import AppTooltip from './AppTooltip.tsx'
 import type { Workload, WorkloadResources } from '../types/infrastructure.ts'
 import StatusChip from './StatusChip.tsx'
@@ -31,8 +31,8 @@ const columns: { key: SortKey; label: string; hint: string; numeric?: boolean }[
   { key: 'namespace', label: 'Namespace', hint: 'The logical group of the pod.' },
   { key: 'node', label: 'Node', hint: 'The server the pod runs on.' },
   { key: 'pod', label: 'Pod', hint: 'The smallest unit Kubernetes runs. It sits on a server, with one or more containers running inside it.' },
-  { key: 'cpu', label: 'CPU', hint: 'Usage as a percent of the workload request.', numeric: true },
-  { key: 'memory', label: 'Memory', hint: 'Usage as a percent of the workload request.', numeric: true },
+  { key: 'cpu', label: 'CPU', hint: 'Each container’s usage as a percent of that container’s request.', numeric: true },
+  { key: 'memory', label: 'Memory', hint: 'Each container’s usage as a percent of that container’s request.', numeric: true },
   { key: 'status', label: 'Status', hint: 'Whether the pod is running.' },
 ]
 
@@ -49,11 +49,16 @@ type WorkloadsTableProps = {
   resources: WorkloadResources[]
 }
 
+type ContainerUsage = {
+  name: string
+  percent: number
+  used: number
+  request: number
+}
+
 type WorkloadRow = Workload & {
-  cpuUsed: number
-  cpuRequest: number
-  memoryUsed: number
-  memoryRequest: number
+  cpuContainers: ContainerUsage[]
+  memoryContainers: ContainerUsage[]
 }
 
 export default function WorkloadsTable({ workloads, resources }: WorkloadsTableProps) {
@@ -316,7 +321,7 @@ export default function WorkloadsTable({ workloads, resources }: WorkloadsTableP
                           height: 28,
                           fontSize: 11,
                           fontWeight: 700,
-                          bgcolor: workload.name.startsWith('feed') ? colors.blue : colors.green,
+                          bgcolor: workloadTone(workload.name).cpu,
                         }}
                       >
                         {initials(workload.name)}
@@ -354,19 +359,11 @@ export default function WorkloadsTable({ workloads, resources }: WorkloadsTableP
                       {workload.pod}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ width: 108 }}>
-                    <AppTooltip title={usageHint('cores', workload.cpuUsed, workload.cpuRequest)} describeChild arrow placement="top" slotProps={tooltipSlotProps}>
-                      <Box sx={{ cursor: 'help' }}>
-                        <UsageMeter value={workload.cpu} />
-                      </Box>
-                    </AppTooltip>
+                  <TableCell sx={{ width: 148, minWidth: 148 }}>
+                    <ContainerMeters items={workload.cpuContainers} unit="cores" />
                   </TableCell>
-                  <TableCell sx={{ width: 108 }}>
-                    <AppTooltip title={usageHint('Gi', workload.memoryUsed, workload.memoryRequest)} describeChild arrow placement="top" slotProps={tooltipSlotProps}>
-                      <Box sx={{ cursor: 'help' }}>
-                        <UsageMeter value={workload.memory} />
-                      </Box>
-                    </AppTooltip>
+                  <TableCell sx={{ width: 148, minWidth: 148 }}>
+                    <ContainerMeters items={workload.memoryContainers} unit="Gi" />
                   </TableCell>
                   <TableCell>
                     <StatusChip status={workload.status} />
@@ -388,24 +385,55 @@ export default function WorkloadsTable({ workloads, resources }: WorkloadsTableP
   )
 }
 
+function ContainerMeters({ items, unit }: { items: ContainerUsage[]; unit: string }) {
+  return (
+    <Stack spacing={0.75}>
+      {items.map((item) => (
+        <AppTooltip
+          key={item.name}
+          title={`${item.name}: ${usageHint(unit, item.used, item.request)}`}
+          describeChild
+          arrow
+          placement="top"
+          slotProps={tooltipSlotProps}
+        >
+          <Box sx={{ cursor: 'help' }}>
+            <UsageMeter value={item.percent} label={items.length > 1 ? item.name : undefined} />
+          </Box>
+        </AppTooltip>
+      ))}
+    </Stack>
+  )
+}
+
 function withUsage(workload: Workload, resources: WorkloadResources[]): WorkloadRow {
-  const resource = resources.find((item) => item.name === workload.name)
-  const cpu = percentOf(resource?.cpu.used ?? 0, resource?.cpu.request ?? 0)
-  const memory = percentOf(resource?.memory.used ?? 0, resource?.memory.request ?? 0)
+  const cpuContainers = workload.containers.map((name) => usageFor(name, 'cpu', resources))
+  const memoryContainers = workload.containers.map((name) => usageFor(name, 'memory', resources))
   return {
     ...workload,
-    cpu: cpu.percent,
-    memory: memory.percent,
-    cpuUsed: resource?.cpu.used ?? 0,
-    cpuRequest: resource?.cpu.request ?? 0,
-    memoryUsed: resource?.memory.used ?? 0,
-    memoryRequest: resource?.memory.request ?? 0,
+    cpuContainers,
+    memoryContainers,
+    cpu: combinedPercent(cpuContainers),
+    memory: combinedPercent(memoryContainers),
   }
 }
 
+function usageFor(name: string, metric: 'cpu' | 'memory', resources: WorkloadResources[]): ContainerUsage {
+  const amount = resources.find((item) => item.name === name)?.[metric]
+  const used = amount?.used ?? 0
+  const request = amount?.request ?? 0
+  return { name, used, request, percent: percentOf(used, request) }
+}
+
+function combinedPercent(items: ContainerUsage[]) {
+  const used = items.reduce((sum, item) => sum + item.used, 0)
+  const request = items.reduce((sum, item) => sum + item.request, 0)
+  return percentOf(used, request)
+}
+
 function percentOf(used: number, request: number) {
-  if (request <= 0) return { percent: 0 }
-  return { percent: Math.round((used / request) * 100) }
+  if (request <= 0) return 0
+  return Math.round((used / request) * 100)
 }
 
 function usageHint(unit: string, used: number, request: number) {

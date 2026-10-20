@@ -1,23 +1,30 @@
 import { useMemo, useState } from 'react'
-import { Box, Card, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
+import { Box, Card, MenuItem, Select, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { colors, seriesColors } from '../colors.ts'
 import type { Workload } from '../types/infrastructure.ts'
-
-type Filter = 'user' | 'feed' | 'both'
 
 type PodDistributionChartProps = {
   workloads: Workload[]
   nodes: string[]
 }
 
+function workloadShort(name: string) {
+  return name.replace(/ workload$/, '')
+}
+
 export default function PodDistributionChart({ workloads, nodes }: PodDistributionChartProps) {
-  const [filter, setFilter] = useState<Filter>('both')
+  const workloadIds = useMemo(
+    () => Array.from(new Set(workloads.map((workload) => workloadShort(workload.name)))),
+    [workloads],
+  )
+  const simple = workloadIds.length <= 2 && workloadIds.every((id) => id === 'user' || id === 'feed')
+  const [filter, setFilter] = useState('both')
   const distribution = useMemo(
     () =>
       nodes.map((name) => ({
         name,
-        pods: workloads.filter((workload) => workload.node === name && (filter === 'both' || workload.name.startsWith(filter))).length,
+        pods: workloads.filter((workload) => workload.node === name && (filter === 'both' || workloadShort(workload.name) === filter)).length,
       })),
     [filter, nodes, workloads],
   )
@@ -29,20 +36,37 @@ export default function PodDistributionChart({ workloads, nodes }: PodDistributi
       <Box sx={{ px: 2.5, pt: 2, pb: 0.5 }}>
         <Stack direction="row" useFlexGap spacing={1} sx={{ alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap' }}>
           <Typography sx={{ fontSize: 15, fontWeight: 600 }}>Pod Distribution</Typography>
-          <ToggleButtonGroup
-            exclusive
-            size="small"
-            value={filter}
-            onChange={(_event, next: Filter | null) => {
-              if (next) setFilter(next)
-            }}
-            aria-label="Pod distribution workload filter"
-            sx={{ flexShrink: 0 }}
-          >
-            <ToggleButton value="user">User</ToggleButton>
-            <ToggleButton value="feed">Feed</ToggleButton>
-            <ToggleButton value="both">Both</ToggleButton>
-          </ToggleButtonGroup>
+          {simple ? (
+            <ToggleButtonGroup
+              exclusive
+              size="small"
+              value={filter}
+              onChange={(_event, next: string | null) => {
+                if (next) setFilter(next)
+              }}
+              aria-label="Pod distribution workload filter"
+              sx={{ flexShrink: 0 }}
+            >
+              <ToggleButton value="user">User</ToggleButton>
+              <ToggleButton value="feed">Feed</ToggleButton>
+              <ToggleButton value="both">Both</ToggleButton>
+            </ToggleButtonGroup>
+          ) : (
+            <Select
+              size="small"
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+              aria-label="Pod distribution workload filter"
+              sx={{ minWidth: 140, flexShrink: 0 }}
+            >
+              <MenuItem value="both">All</MenuItem>
+              {workloadIds.map((id) => (
+                <MenuItem key={id} value={id}>
+                  {id.charAt(0).toUpperCase() + id.slice(1)}
+                </MenuItem>
+              ))}
+            </Select>
+          )}
         </Stack>
         <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
           {distribution.map((item) => `${item.name} runs ${item.pods} ${item.pods === 1 ? 'pod' : 'pods'}.`).join(' ')}

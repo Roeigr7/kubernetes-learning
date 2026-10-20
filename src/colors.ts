@@ -28,6 +28,20 @@ export const colors = {
   userMemory: '#E64980',
   feedCpu: '#12B886',
   feedMemory: '#FD7E14',
+  checkoutCpu: '#7C3AED',
+  checkoutMemory: '#A855F7',
+  searchCpu: '#0891B2',
+  searchMemory: '#06B6D4',
+  billingCpu: '#C2410C',
+  billingMemory: '#EA580C',
 }
 
-export const seriesColors = ['#22C55E', '#3B82F6', '#FB7185']
+export const seriesColors = ['#22C55E', '#3B82F6', '#FB7185', '#8B5CF6', '#F59E0B']
+
+export function workloadTone(name: string) {
+  if (name.startsWith('feed')) return { cpu: colors.feedCpu, memory: colors.feedMemory }
+  if (name.startsWith('checkout')) return { cpu: colors.checkoutCpu, memory: colors.checkoutMemory }
+  if (name.startsWith('search')) return { cpu: colors.searchCpu, memory: colors.searchMemory }
+  if (name.startsWith('billing')) return { cpu: colors.billingCpu, memory: colors.billingMemory }
+  return { cpu: colors.userCpu, memory: colors.userMemory }
+}

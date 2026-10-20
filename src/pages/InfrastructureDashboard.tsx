@@ -1,13 +1,14 @@
-import { useState } from 'react'
-import { Box, Breadcrumbs, Chip, Stack, Typography } from '@mui/material'
+import { useMemo, useState } from 'react'
+import { Box, Breadcrumbs, Chip, MenuItem, Select, Stack, Typography } from '@mui/material'
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined'
 import DnsOutlinedIcon from '@mui/icons-material/DnsOutlined'
 import SpeedOutlinedIcon from '@mui/icons-material/SpeedOutlined'
 import ViewInArIcon from '@mui/icons-material/ViewInAr'
 import { getInfrastructure } from '../api/getInfrastructure.ts'
+import { buildContainerRightsizing } from '../data/containerRightsizing.ts'
 import RightsizingIntro from '../components/RightsizingIntro.tsx'
 import WorkloadResourcesCard from '../components/WorkloadResourcesCard.tsx'
-import WorkloadUsageChart from '../components/WorkloadUsageChart.tsx'
+import WorkloadUsageChart, { defaultUsageSeries } from '../components/WorkloadUsageChart.tsx'
 import DashboardHeader from '../components/DashboardHeader.tsx'
 import InfrastructureTopology from '../components/InfrastructureTopology.tsx'
 import PodDistributionChart from '../components/PodDistributionChart.tsx'
@@ -16,22 +17,37 @@ import WorkloadsTable from '../components/WorkloadsTable.tsx'
 import { colors } from '../colors.ts'
 import { nextResourceValue } from '../utils/adjustResource.ts'
 import { titleCase } from '../utils/format.ts'
+import { summarizeWeek, type WeekStats } from '../utils/rightsizing.ts'
+import type { UsageSeries, WorkloadHour } from '../types/infrastructure.ts'
 
 export default function InfrastructureDashboard() {
-  const data = getInfrastructure()
-  const [environment, setEnvironment] = useState(data.company.environment)
+  const [environment, setEnvironment] = useState(() => getInfrastructure().company.environment)
+  const data = getInfrastructure(environment)
   const [region, setRegion] = useState(data.company.region)
-  const [resources, setResources] = useState(() => copyResources(data.workloadResources))
+  const [resources, setResources] = useState(() => copyResources(getInfrastructure().workloadResources))
+  const [containerResources, setContainerResources] = useState(() => copyResources(buildContainerRightsizing(getInfrastructure()).resources))
+  const [workload, setWorkload] = useState('user')
+  const [container, setContainer] = useState('workload')
+  const learningProd = environment === 'Learning Prod'
+  const containerView = useMemo(() => buildContainerRightsizing(getInfrastructure(environment)), [environment])
+  const workloadIds = resources.map((item) => item.name.replace(/ workload$/, ''))
+  const containerIds = containerView.containersByWorkload[workload] ?? []
+  const containerMode = container !== 'workload' && containerIds.includes(container)
+  const activeResources = containerMode ? containerResources : resources
+  const activeId = containerMode ? container : workload
+  const activeHistory = containerMode ? containerView.history : data.workloadDay
+  const activeSeries = containerMode ? containerView.series : data.usageSeries
 
   function adjustResource(name: string, metric: 'cpu' | 'memory', field: 'request' | 'limit', direction: 'raise' | 'lower') {
-    setResources((current) =>
+    const update = (current: typeof resources) =>
       current.map((item) => {
         if (item.name !== name) return item
         const next = nextResourceValue(current, name, metric, field, direction)
         if (next === null) return item
         return { ...item, [metric]: { ...item[metric], [field]: next } }
-      }),
-    )
+      })
+    if (containerMode) setContainerResources(update)
+    else setResources(update)
   }
 
   const readyNodes = data.nodes.filter((node) => node.status === 'Ready').length
@@ -52,7 +68,15 @@ export default function InfrastructureDashboard() {
         notifications={data.notifications}
         environment={environment}
         region={region}
-        onEnvironmentChange={setEnvironment}
+        onEnvironmentChange={(next) => {
+          const nextData = getInfrastructure(next)
+          const nextResources = copyResources(nextData.workloadResources)
+          setEnvironment(next)
+          setResources(nextResources)
+          setContainerResources(copyResources(buildContainerRightsizing(nextData).resources))
+          setContainer('workload')
+          setWorkload(nextResources.some((item) => item.name.startsWith('user')) ? 'user' : nextResources[0]?.name.replace(/ workload$/, '') ?? 'user')
+        }}
         onRegionChange={setRegion}
       />
 
@@ -72,7 +96,9 @@ export default function InfrastructureDashboard() {
               <Box>
                 <Typography sx={{ fontSize: 22, fontWeight: 600, letterSpacing: -0.3 }}>Kube-Learn (WRS)</Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25, maxWidth: 760 }}>
-                  production runs on every node. stage runs on node-1 and node-2.
+                  {learningProd
+                    ? 'Learning Prod runs user, feed, checkout, search, and billing across five nodes.'
+                    : 'production runs on every node. stage runs on node-1 and node-2.'}
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
                   {data.cluster.provider} {data.cluster.kubernetesVersion} · {region}
@@ -142,8 +168,8 @@ export default function InfrastructureDashboard() {
               gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 2fr) minmax(280px, 1fr)' },
             }}
           >
-            <WorkloadsTable workloads={data.workloads} resources={resources} />
-            <PodDistributionChart workloads={data.workloads} nodes={data.nodes.map((node) => node.name)} />
+            <WorkloadsTable key={`workloads-${environment}`} workloads={data.workloads} resources={containerResources} />
+            <PodDistributionChart key={`pods-${environment}`} workloads={data.workloads} nodes={data.nodes.map((node) => node.name)} />
           </Box>
 
           <Stack spacing={1.5}>
@@ -180,26 +206,78 @@ export default function InfrastructureDashboard() {
                 }}
               >
                 <Typography sx={{ fontSize: { xs: 13, sm: 15 }, fontWeight: 600, lineHeight: 1.15 }}>
-                  CPU and memory per workload
+                  {containerMode ? 'CPU and memory per container' : 'CPU and memory per workload'}
                 </Typography>
                 <Typography sx={{ color: 'text.secondary', fontSize: { xs: 12, sm: 14 }, lineHeight: 1.15 }}>
-                  Actual use across the day. Straight lines are request and limit.
+                  {learningProd
+                    ? 'Measured across the last week. Average, peak, P95, and P99 are the rightsizing readings.'
+                    : 'Measured across the day. Average, peak, P95, and P99 are the rightsizing readings.'}
                 </Typography>
               </Box>
+              <Stack direction="row" spacing={1} useFlexGap sx={{ alignSelf: 'center', ml: { sm: 'auto' }, flexWrap: 'wrap' }}>
+                <Select
+                  size="small"
+                  value={workloadIds.includes(workload) ? workload : workloadIds[0]}
+                  onChange={(event) => {
+                    setWorkload(event.target.value)
+                    setContainer('workload')
+                  }}
+                  aria-label="Workload rightsizing filter"
+                  sx={{ minWidth: 140 }}
+                >
+                  {workloadIds.map((id) => (
+                    <MenuItem key={id} value={id}>
+                      {labelFor(id)}
+                    </MenuItem>
+                  ))}
+                </Select>
+                <Select
+                  size="small"
+                  value={containerMode ? container : 'workload'}
+                  onChange={(event) => setContainer(event.target.value)}
+                  aria-label="Container rightsizing filter"
+                  sx={{ minWidth: 160 }}
+                >
+                  <MenuItem value="workload">Workload</MenuItem>
+                  {containerIds.map((id) => (
+                    <MenuItem key={id} value={id}>
+                      {labelFor(id)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </Stack>
             </Box>
             <Box
               sx={{
                 display: 'grid',
                 gap: 2.5,
                 alignItems: 'stretch',
-                gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 9fr) minmax(280px, 3fr)' },
+                gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 2fr) minmax(280px, 1fr)' },
               }}
             >
               <Box sx={{ minWidth: 0, height: '100%', order: { xs: 2, lg: 1 } }}>
-                <WorkloadUsageChart history={data.workloadDay} resources={resources} />
+                <WorkloadUsageChart
+                  key={`usage-${environment}-${containerMode ? container : 'workload'}`}
+                  history={activeHistory}
+                  resources={activeResources}
+                  workload={activeId}
+                  period={data.usagePeriod}
+                  series={activeSeries}
+                />
               </Box>
               <Box sx={{ minWidth: 0, height: '100%', order: { xs: 1, lg: 2 } }}>
-                <WorkloadResourcesCard resources={resources} onAdjust={adjustResource} onReset={() => setResources(copyResources(data.workloadResources))} />
+                <WorkloadResourcesCard
+                  key={`resources-${environment}-${containerMode ? container : 'workload'}`}
+                  resources={activeResources}
+                  workload={activeId}
+                  period={data.usagePeriod ?? 'day'}
+                  readings={weekReadings(activeHistory, activeSeries ?? defaultUsageSeries)}
+                  onAdjust={adjustResource}
+                  onReset={() => {
+                    if (containerMode) setContainerResources(copyResources(buildContainerRightsizing(data).resources))
+                    else setResources(copyResources(data.workloadResources))
+                  }}
+                />
               </Box>
             </Box>
           </Stack>
@@ -209,15 +287,40 @@ export default function InfrastructureDashboard() {
             region={region}
             nodes={data.nodes}
             workloads={data.workloads}
+            controlPlane={data.controlPlane}
           />
 
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Practice snapshot for {data.company.name}. Two workloads, three nodes, six pods, eight containers. user-pod-1 and feed-pod-1 each run two containers. This dashboard is not connected to a live cluster.
+            {learningProd
+              ? `Practice snapshot for ${data.company.name}. Learning Prod has five workloads, five nodes, eleven pods, and fourteen containers. Usage is a week of samples. This dashboard is not connected to a live cluster.`
+              : `Practice snapshot for ${data.company.name}. Two workloads, three nodes, six pods, eight containers. user-pod-1 and feed-pod-1 each run two containers. This dashboard is not connected to a live cluster.`}
           </Typography>
         </Stack>
       </Box>
     </Box>
   )
+}
+
+function labelFor(id: string) {
+  return id.charAt(0).toUpperCase() + id.slice(1)
+}
+
+function weekReadings(history: WorkloadHour[], series: UsageSeries[]) {
+  const readings: Record<string, { cpu: WeekStats; memory: WeekStats }> = {}
+  for (const item of series) {
+    const values = history.map((point) => {
+      const value = point[item.key]
+      return typeof value === 'number' ? value : 0
+    })
+    const current = readings[item.workload] ?? { cpu: emptyReading(), memory: emptyReading() }
+    current[item.metric] = summarizeWeek(values)
+    readings[item.workload] = current
+  }
+  return readings
+}
+
+function emptyReading(): WeekStats {
+  return { average: 0, peak: 0, p95: 0, p99: 0 }
 }
 
 function copyResources(items: import('../types/infrastructure.ts').WorkloadResources[]) {
