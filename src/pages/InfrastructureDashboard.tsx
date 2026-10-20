@@ -5,7 +5,7 @@ import DnsOutlinedIcon from '@mui/icons-material/DnsOutlined'
 import SpeedOutlinedIcon from '@mui/icons-material/SpeedOutlined'
 import ViewInArIcon from '@mui/icons-material/ViewInAr'
 import { getInfrastructure } from '../api/getInfrastructure.ts'
-import { buildContainerRightsizing } from '../data/containerRightsizing.ts'
+import { buildContainerRightsizing, buildPodRightsizing } from '../data/containerRightsizing.ts'
 import RightsizingIntro from '../components/RightsizingIntro.tsx'
 import WorkloadResourcesCard from '../components/WorkloadResourcesCard.tsx'
 import WorkloadUsageChart, { defaultUsageSeries } from '../components/WorkloadUsageChart.tsx'
@@ -26,17 +26,22 @@ export default function InfrastructureDashboard() {
   const [region, setRegion] = useState(data.company.region)
   const [resources, setResources] = useState(() => copyResources(getInfrastructure().workloadResources))
   const [containerResources, setContainerResources] = useState(() => copyResources(buildContainerRightsizing(getInfrastructure()).resources))
+  const [podResources, setPodResources] = useState(() => copyResources(buildPodRightsizing(getInfrastructure()).resources))
   const [workload, setWorkload] = useState('user')
+  const [pod, setPod] = useState('workload')
   const [container, setContainer] = useState('workload')
   const learningProd = environment === 'Learning Prod'
   const containerView = useMemo(() => buildContainerRightsizing(getInfrastructure(environment)), [environment])
+  const podView = useMemo(() => buildPodRightsizing(getInfrastructure(environment)), [environment])
   const workloadIds = resources.map((item) => item.name.replace(/ workload$/, ''))
-  const containerIds = containerView.containersByWorkload[workload] ?? []
+  const pods = podView.podsByWorkload[workload] ?? []
+  const podMode = pod !== 'workload' && pods.some((item) => item.id === pod)
+  const containerIds = podMode ? pods.find((item) => item.id === pod)?.containers ?? [] : containerView.containersByWorkload[workload] ?? []
   const containerMode = container !== 'workload' && containerIds.includes(container)
-  const activeResources = containerMode ? containerResources : resources
-  const activeId = containerMode ? container : workload
-  const activeHistory = containerMode ? containerView.history : data.workloadDay
-  const activeSeries = containerMode ? containerView.series : data.usageSeries
+  const activeResources = containerMode ? containerResources : podMode ? podResources : resources
+  const activeId = containerMode ? container : podMode ? pod : workload
+  const activeHistory = containerMode ? containerView.history : podMode ? podView.history : data.workloadDay
+  const activeSeries = containerMode ? containerView.series : podMode ? podView.series : data.usageSeries
 
   function adjustResource(name: string, metric: 'cpu' | 'memory', field: 'request' | 'limit', direction: 'raise' | 'lower') {
     const update = (current: typeof resources) =>
@@ -47,6 +52,7 @@ export default function InfrastructureDashboard() {
         return { ...item, [metric]: { ...item[metric], [field]: next } }
       })
     if (containerMode) setContainerResources(update)
+    else if (podMode) setPodResources(update)
     else setResources(update)
   }
 
@@ -74,6 +80,8 @@ export default function InfrastructureDashboard() {
           setEnvironment(next)
           setResources(nextResources)
           setContainerResources(copyResources(buildContainerRightsizing(nextData).resources))
+          setPodResources(copyResources(buildPodRightsizing(nextData).resources))
+          setPod('workload')
           setContainer('workload')
           setWorkload(nextResources.some((item) => item.name.startsWith('user')) ? 'user' : nextResources[0]?.name.replace(/ workload$/, '') ?? 'user')
         }}
@@ -206,7 +214,7 @@ export default function InfrastructureDashboard() {
                 }}
               >
                 <Typography sx={{ fontSize: { xs: 13, sm: 15 }, fontWeight: 600, lineHeight: 1.15 }}>
-                  {containerMode ? 'CPU and memory per container' : 'CPU and memory per workload'}
+                  {containerMode ? 'CPU and memory per container' : podMode ? 'CPU and memory per pod' : 'CPU and memory per workload'}
                 </Typography>
                 <Typography sx={{ color: 'text.secondary', fontSize: { xs: 12, sm: 14 }, lineHeight: 1.15 }}>
                   {learningProd
@@ -220,6 +228,7 @@ export default function InfrastructureDashboard() {
                   value={workloadIds.includes(workload) ? workload : workloadIds[0]}
                   onChange={(event) => {
                     setWorkload(event.target.value)
+                    setPod('workload')
                     setContainer('workload')
                   }}
                   aria-label="Workload rightsizing filter"
@@ -228,6 +237,23 @@ export default function InfrastructureDashboard() {
                   {workloadIds.map((id) => (
                     <MenuItem key={id} value={id}>
                       {labelFor(id)}
+                    </MenuItem>
+                  ))}
+                </Select>
+                <Select
+                  size="small"
+                  value={podMode ? pod : 'workload'}
+                  onChange={(event) => {
+                    setPod(event.target.value)
+                    setContainer('workload')
+                  }}
+                  aria-label="Pod rightsizing filter"
+                  sx={{ minWidth: 150 }}
+                >
+                  <MenuItem value="workload">All pods</MenuItem>
+                  {pods.map((item) => (
+                    <MenuItem key={item.id} value={item.id}>
+                      {item.id}
                     </MenuItem>
                   ))}
                 </Select>
@@ -257,7 +283,7 @@ export default function InfrastructureDashboard() {
             >
               <Box sx={{ minWidth: 0, height: '100%', order: { xs: 2, lg: 1 } }}>
                 <WorkloadUsageChart
-                  key={`usage-${environment}-${containerMode ? container : 'workload'}`}
+                  key={`usage-${environment}-${podMode ? pod : 'workload'}-${containerMode ? container : 'workload'}`}
                   history={activeHistory}
                   resources={activeResources}
                   workload={activeId}
@@ -267,7 +293,7 @@ export default function InfrastructureDashboard() {
               </Box>
               <Box sx={{ minWidth: 0, height: '100%', order: { xs: 1, lg: 2 } }}>
                 <WorkloadResourcesCard
-                  key={`resources-${environment}-${containerMode ? container : 'workload'}`}
+                  key={`resources-${environment}-${podMode ? pod : 'workload'}-${containerMode ? container : 'workload'}`}
                   resources={activeResources}
                   workload={activeId}
                   period={data.usagePeriod ?? 'day'}
@@ -275,6 +301,7 @@ export default function InfrastructureDashboard() {
                   onAdjust={adjustResource}
                   onReset={() => {
                     if (containerMode) setContainerResources(copyResources(buildContainerRightsizing(data).resources))
+                    else if (podMode) setPodResources(copyResources(buildPodRightsizing(data).resources))
                     else setResources(copyResources(data.workloadResources))
                   }}
                 />

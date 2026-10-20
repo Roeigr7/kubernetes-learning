@@ -11,6 +11,95 @@ export type ContainerRightsizing = {
   containersByWorkload: Record<string, string[]>
 }
 
+export type PodInfo = {
+  id: string
+  containers: string[]
+}
+
+export type PodRightsizing = {
+  resources: WorkloadResources[]
+  history: WorkloadHour[]
+  series: UsageSeries[]
+  podsByWorkload: Record<string, PodInfo[]>
+}
+
+export function buildPodRightsizing(data: InfrastructureData): PodRightsizing {
+  const containers = buildContainerRightsizing(data)
+  const byName = new Map(containers.resources.map((item) => [item.name, item]))
+  const podsByWorkload: Record<string, PodInfo[]> = {}
+  for (const row of data.workloads) {
+    const parent = row.name.replace(/ workload$/, '')
+    const list = podsByWorkload[parent] ?? []
+    if (!list.some((pod) => pod.id === row.pod)) list.push({ id: row.pod, containers: [...row.containers] })
+    podsByWorkload[parent] = list
+  }
+
+  const sampleCache = new Map<string, { cpu: number[]; memory: number[] }>()
+  const resources: WorkloadResources[] = []
+  const series: UsageSeries[] = []
+
+  for (const parent of Object.keys(podsByWorkload)) {
+    for (const pod of podsByWorkload[parent]) {
+      const seed = hash(pod.id)
+      const cpu = mixPod(
+        pod.containers.map((name) => valuesOf(containers.history, seriesKey(name, 'cpu'))),
+        seed,
+      )
+      const memory = mixPod(
+        pod.containers.map((name) => valuesOf(containers.history, seriesKey(name, 'memory'))),
+        seed + 17,
+      )
+      sampleCache.set(pod.id, { cpu, memory })
+      const tone = workloadTone(parent)
+      series.push(
+        { key: seriesKey(pod.id, 'cpu'), name: `${pod.id} CPU`, color: tone.cpu, workload: pod.id, metric: 'cpu' },
+        { key: seriesKey(pod.id, 'memory'), name: `${pod.id} memory`, color: tone.memory, workload: pod.id, metric: 'memory' },
+      )
+      const parts = pod.containers.map((name) => byName.get(name)).filter((item): item is WorkloadResources => item !== undefined)
+      resources.push({
+        name: pod.id,
+        cpu: podAmount(parts, 'cpu', cpu),
+        memory: podAmount(parts, 'memory', memory),
+      })
+    }
+  }
+
+  const history = data.workloadDay.map((point, index) => {
+    const next: WorkloadHour = { ...point }
+    for (const [id, samples] of sampleCache) {
+      next[seriesKey(id, 'cpu')] = samples.cpu[index] ?? 0
+      next[seriesKey(id, 'memory')] = samples.memory[index] ?? 0
+    }
+    return next
+  })
+
+  return { resources, history, series, podsByWorkload }
+}
+
+function mixPod(parts: number[][], seed: number) {
+  const count = parts[0]?.length ?? 0
+  const rand = mulberry32(seed)
+  const values: number[] = []
+  for (let index = 0; index < count; index += 1) {
+    const sum = parts.reduce((total, part) => total + (part[index] ?? 0), 0)
+    const noise = 0.82 + rand() * 0.36
+    values.push(round1(Math.max(0.2, sum * noise)))
+  }
+  return values
+}
+
+function podAmount(parts: WorkloadResources[], metric: 'cpu' | 'memory', values: number[]) {
+  const stats = summarizeWeek(values)
+  const sizing = sizingFor(metric, stats)
+  let request = roundHalf(Math.max(0.5, parts.reduce((total, item) => total + item[metric].request, 0)))
+  let limit = roundHalf(parts.reduce((total, item) => total + item[metric].limit, 0))
+  limit = roundHalf(Math.max(limit, sizing.limit, stats.peak))
+  if (limit <= request) limit = roundHalf(request + 0.5)
+  while (request >= limit) request = roundHalf(Math.max(0.5, request - 0.5))
+  const possible = Math.max(8, ...parts.map((item) => item[metric].possible), Math.ceil(limit + 2))
+  return { used: round1(values[values.length - 1] ?? 0), request, limit, possible }
+}
+
 export function buildContainerRightsizing(data: InfrastructureData): ContainerRightsizing {
   const week = data.usagePeriod === 'week'
   const containersByWorkload: Record<string, string[]> = {}
